@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import UTC, datetime
+import json
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
@@ -41,10 +42,31 @@ class Assignment(Base):
     due_date: Mapped[str | None] = mapped_column(String(64), nullable=True)
     total_points: Mapped[float] = mapped_column(Float, default=100)
     status: Mapped[str] = mapped_column(String(32), default="published")
+    validation_profile: Mapped[str] = mapped_column(String(64), default="lammps_basic_health")
+    required_file_types_json: Mapped[str] = mapped_column(Text, default='["lammps_input", "lammps_log"]')
+    optional_file_types_json: Mapped[str] = mapped_column(Text, default='["readme", "prompt_log", "python_analysis", "ovito_script", "figure"]')
+    validation_settings_json: Mapped[str] = mapped_column(Text, default="{}")
+    interpretation_prompts_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     course = relationship("Course")
     rubric = relationship("Rubric", back_populates="assignment", uselist=False, cascade="all, delete-orphan")
+
+    @property
+    def required_file_types(self) -> list[str]:
+        return _json_list(self.required_file_types_json, ["lammps_input", "lammps_log"])
+
+    @property
+    def optional_file_types(self) -> list[str]:
+        return _json_list(self.optional_file_types_json, ["readme", "prompt_log", "python_analysis", "ovito_script", "figure"])
+
+    @property
+    def validation_settings(self) -> dict:
+        return _json_dict(self.validation_settings_json)
+
+    @property
+    def interpretation_prompts(self) -> list[str]:
+        return _json_list(self.interpretation_prompts_json, [])
 
 
 class Rubric(Base):
@@ -166,9 +188,44 @@ class ValidationReport(Base):
     submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"))
     status: Mapped[str] = mapped_column(String(32))
     summary: Mapped[str] = mapped_column(Text)
+    validation_profile: Mapped[str] = mapped_column(String(64), default="lammps_basic_health")
+    thermo_json: Mapped[str] = mapped_column(Text, default="[]")
+    interpretation_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     checks = relationship("ValidationCheck", cascade="all, delete-orphan")
+
+    @property
+    def thermo_series(self) -> list[dict]:
+        try:
+            parsed = json.loads(self.thermo_json or "[]")
+        except json.JSONDecodeError:
+            return []
+        return parsed if isinstance(parsed, list) else []
+
+    @property
+    def interpretation_notes(self) -> list[dict]:
+        try:
+            parsed = json.loads(self.interpretation_json or "[]")
+        except json.JSONDecodeError:
+            return []
+        return parsed if isinstance(parsed, list) else []
+
+
+def _json_list(raw: str, fallback: list[str]) -> list[str]:
+    try:
+        parsed = json.loads(raw or "[]")
+    except json.JSONDecodeError:
+        return fallback
+    return [str(item) for item in parsed] if isinstance(parsed, list) else fallback
+
+
+def _json_dict(raw: str) -> dict:
+    try:
+        parsed = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
 class ValidationCheck(Base):

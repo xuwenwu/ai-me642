@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
-import { api, download } from '@/lib/api';
+import { InterpretationNotes } from '@/components/InterpretationNotes';
+import { ThermoPlots } from '@/components/ThermoPlots';
+import { EvidenceChecklist, ValidationSummary, fileTypeLabels, nextSubmissionAction } from '@/components/ValidationSummary';
+import { ApiError, api, download } from '@/lib/api';
 import type { Assignment, FileArtifact, ProjectSpec, Submission, ValidationReport } from '@/lib/types';
 
 const fileTypes = [
@@ -24,12 +27,17 @@ export default function SubmissionsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [createForm, setCreateForm] = useState({ assignment_id: '', project_id: '', title: 'Lab 3 NVE validation package' });
+  const [createForm, setCreateForm] = useState({ assignment_id: '', project_id: '', title: '' });
   const [fileType, setFileType] = useState('lammps_log');
   const [file, setFile] = useState<File | null>(null);
   const [interpretation, setInterpretation] = useState('');
+  const [interpretationMessage, setInterpretationMessage] = useState('');
 
   const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
+  const selectedAssignment = useMemo(() => assignments.find((assignment) => assignment.id === selected?.assignment_id), [assignments, selected]);
+  const draftAssignment = useMemo(() => assignments.find((assignment) => assignment.id === Number(createForm.assignment_id)), [assignments, createForm.assignment_id]);
+  const latestReport = selected?.validation_reports[0];
+  const nextAction = nextSubmissionAction(selected, selectedAssignment);
 
   async function load() {
     const [a, p, s] = await Promise.all([api<Assignment[]>('/assignments'), api<ProjectSpec[]>('/projects'), api<Submission[]>('/submissions')]);
@@ -37,6 +45,7 @@ export default function SubmissionsPage() {
     setProjects(p);
     setSubmissions(s);
     if (!selectedId && s[0]) setSelectedId(s[0].id);
+    return s;
   }
 
   useEffect(() => {
@@ -45,17 +54,25 @@ export default function SubmissionsPage() {
 
   useEffect(() => {
     setInterpretation(selected?.student_interpretation || '');
+    setInterpretationMessage('');
   }, [selected?.id]);
 
   async function createSubmission(event: React.FormEvent) {
     event.preventDefault();
     setError('');
     setMessage('');
+    const assignmentId = Number(createForm.assignment_id);
+    const existing = submissions.find((submission) => submission.assignment_id === assignmentId);
+    if (existing) {
+      setSelectedId(existing.id);
+      setMessage(`Submission #${existing.id} already exists for this assignment. Continue with the selected submission below.`);
+      return;
+    }
     try {
       const created = await api<Submission>('/submissions', {
         method: 'POST',
         body: JSON.stringify({
-          assignment_id: Number(createForm.assignment_id),
+          assignment_id: assignmentId,
           project_id: createForm.project_id ? Number(createForm.project_id) : null,
           title: createForm.title,
         }),
@@ -64,6 +81,15 @@ export default function SubmissionsPage() {
       setSelectedId(created.id);
       setMessage(`Created submission #${created.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const latest = await load();
+        const match = latest.find((submission) => submission.assignment_id === assignmentId);
+        if (match) {
+          setSelectedId(match.id);
+          setMessage(`Submission #${match.id} already exists for this assignment. Continue with the selected submission below.`);
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : 'Failed to create submission');
     }
   }
@@ -102,6 +128,7 @@ export default function SubmissionsPage() {
     if (!selected) return;
     setError('');
     setMessage('');
+    setInterpretationMessage('');
     try {
       await api<Submission>(`/submissions/${selected.id}/interpretation`, {
         method: 'PATCH',
@@ -109,6 +136,7 @@ export default function SubmissionsPage() {
       });
       await load();
       setMessage('Saved interpretation');
+      setInterpretationMessage('Interpretation saved. You can still revise it before submitting.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save interpretation');
     }
@@ -118,10 +146,12 @@ export default function SubmissionsPage() {
     if (!selected) return;
     setError('');
     setMessage('');
+    setInterpretationMessage('');
     try {
       await api<Submission>(`/submissions/${selected.id}/submit`, { method: 'POST' });
       await load();
       setMessage('Submission marked as submitted');
+      setInterpretationMessage('Assignment submitted. The dashboard and instructor view will now show this package as submitted.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit');
     }
@@ -136,10 +166,24 @@ export default function SubmissionsPage() {
         <section className="card">
           <h2>Create Submission</h2>
           <form className="form" onSubmit={createSubmission}>
-            <label>Assignment<select value={createForm.assignment_id} onChange={(e) => setCreateForm({ ...createForm, assignment_id: e.target.value })} required>
+            <label>Assignment<select value={createForm.assignment_id} onChange={(e) => {
+              const nextAssignment = assignments.find((assignment) => assignment.id === Number(e.target.value));
+              setCreateForm({
+                ...createForm,
+                assignment_id: e.target.value,
+                title: createForm.title || (nextAssignment ? `${nextAssignment.title} package` : ''),
+              });
+            }} required>
               <option value="">Select assignment</option>
               {assignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.title}</option>)}
             </select></label>
+            {draftAssignment ? (
+              <div className="assignment-context">
+                <strong>{draftAssignment.validation_profile}</strong>
+                <p>{draftAssignment.description}</p>
+                <p className="muted">Due: {draftAssignment.due_date || 'not set'} - {draftAssignment.total_points} pts</p>
+              </div>
+            ) : null}
             <label>Project<select value={createForm.project_id} onChange={(e) => setCreateForm({ ...createForm, project_id: e.target.value })}>
               <option value="">Optional project</option>
               {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
@@ -156,8 +200,10 @@ export default function SubmissionsPage() {
           {selected ? (
             <div>
               <p>Status: <strong>{selected.status}</strong></p>
-              <p>Files: {selected.files.length}</p>
-              <p>Latest validation: {selected.validation_reports[0]?.status || 'not run'}</p>
+              <p>Next: <strong>{nextAction}</strong></p>
+              <p>Assignment: {selectedAssignment?.title || selected.assignment_id}</p>
+              <p>Latest validation: {latestReport?.status || 'not run'}</p>
+              <p className="muted">Profile: {latestReport?.validation_profile || selectedAssignment?.validation_profile || 'not set'}</p>
             </div>
           ) : <p className="muted">Create a submission to begin.</p>}
         </section>
@@ -165,50 +211,77 @@ export default function SubmissionsPage() {
       {selected ? (
         <>
           <section className="card" style={{ marginTop: '1rem' }}>
+            <div className="section-header">
+              <h2>Evidence Status</h2>
+              <span className="status warning">{nextAction}</span>
+            </div>
+            {selectedAssignment ? (
+              <p className="muted">{selectedAssignment.title} - {selectedAssignment.validation_profile}</p>
+            ) : null}
+            <ValidationSummary submission={selected} report={latestReport} />
+            <EvidenceChecklist submission={selected} assignment={selectedAssignment} />
+          </section>
+          <section className="card" style={{ marginTop: '1rem' }}>
             <h2>Upload Artifacts</h2>
             <form className="form" onSubmit={uploadArtifact}>
               <label>File type<select value={fileType} onChange={(e) => setFileType(e.target.value)}>
-                {fileTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                {fileTypes.map((type) => <option key={type} value={type}>{fileTypeLabels[type] ?? type}</option>)}
               </select></label>
               <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               <button disabled={!file}>Upload</button>
             </form>
-            <table>
-              <thead><tr><th>Type</th><th>Name</th><th>Size</th></tr></thead>
-              <tbody>{selected.files.map((artifact) => <tr key={artifact.id}><td>{artifact.file_type}</td><td>{artifact.original_filename}</td><td>{artifact.size_bytes}</td></tr>)}</tbody>
-            </table>
+            <details className="details-panel" open={selected.files.length > 0}>
+              <summary>Uploaded files ({selected.files.length})</summary>
+              <table>
+                <thead><tr><th>Type</th><th>Name</th><th>Size</th></tr></thead>
+                <tbody>{selected.files.map((artifact) => <tr key={artifact.id}><td>{artifact.file_type}</td><td>{artifact.original_filename}</td><td>{artifact.size_bytes}</td></tr>)}</tbody>
+              </table>
+            </details>
           </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <div className="row">
               <h2>Validation</h2>
               <button onClick={runValidation}>Run validation</button>
             </div>
-            {selected.validation_reports[0] ? (
+            {latestReport ? (
               <>
-                <p><span className={`status ${selected.validation_reports[0].status}`}>{selected.validation_reports[0].status}</span> {selected.validation_reports[0].summary}</p>
-                <table>
-                  <thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead>
-                  <tbody>
-                    {selected.validation_reports[0].checks.map((check) => (
-                      <tr key={check.id}>
-                        <td>{check.check_type}</td>
-                        <td><span className={`status ${check.status}`}>{check.status}</span></td>
-                        <td>{check.message}</td>
-                        <td>{check.evidence}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <p><span className={`status ${latestReport.status}`}>{latestReport.status}</span> {latestReport.summary}</p>
+                <ValidationSummary submission={selected} report={latestReport} />
+                <ThermoPlots series={latestReport.thermo_series} />
+                <InterpretationNotes notes={latestReport.interpretation_notes} />
+                <details className="details-panel">
+                  <summary>Detailed validation checks ({latestReport.checks.length})</summary>
+                  <table>
+                    <thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead>
+                    <tbody>
+                      {latestReport.checks.map((check) => (
+                        <tr key={check.id}>
+                          <td>{check.check_type}</td>
+                          <td><span className={`status ${check.status}`}>{check.status}</span></td>
+                          <td>{check.message}</td>
+                          <td>{check.evidence}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
               </>
             ) : <p className="muted">No validation report yet.</p>}
           </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <h2>Student Interpretation</h2>
+            {selectedAssignment?.interpretation_prompts.length ? (
+              <div className="prompt-cues">
+                {selectedAssignment.interpretation_prompts.map((prompt) => <p key={prompt}>{prompt}</p>)}
+              </div>
+            ) : null}
             <textarea value={interpretation} onChange={(e) => setInterpretation(e.target.value)} />
+            {interpretationMessage ? <div className="inline-success" role="status">{interpretationMessage}</div> : null}
+            {selected.status === 'submitted' ? <div className="inline-success" role="status">This assignment is submitted.</div> : null}
             <div className="row" style={{ marginTop: '0.75rem' }}>
               <button onClick={saveInterpretation}>Save interpretation</button>
               <button className="secondary" onClick={() => download(`/submissions/${selected.id}/package`, `submission_${selected.id}_package.zip`)}>Download ZIP</button>
-              <button onClick={submitAssignment}>Submit assignment</button>
+              <button onClick={submitAssignment} disabled={selected.status === 'submitted'}>{selected.status === 'submitted' ? 'Submitted' : 'Submit assignment'}</button>
             </div>
           </section>
         </>
@@ -216,4 +289,3 @@ export default function SubmissionsPage() {
     </AppShell>
   );
 }
-

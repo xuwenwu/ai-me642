@@ -40,7 +40,7 @@ export default function LoginPage() {
     <main className="main">
       <section className="card" style={{ maxWidth: 520, margin: '4rem auto' }}>
         <h1>AI-ME642 Studio</h1>
-        <p className="muted">Sign in with a seeded account to test the Phase I-plus workflow.</p>
+        <p className="muted">Sign in with a seeded account to test the Phase II pilot workflow.</p>
         <form className="form" onSubmit={submit}>
           <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
           <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
@@ -52,4 +52,3 @@ export default function LoginPage() {
     </main>
   );
 }
-

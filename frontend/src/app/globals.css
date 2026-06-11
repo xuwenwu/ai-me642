@@ -126,9 +126,46 @@ textarea {
   gap: 0.75rem;
 }
 
+.section-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
 .form {
   display: grid;
   gap: 0.85rem;
+}
+
+.filter-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.assignment-row {
+  border-top: 1px solid var(--line);
+  padding: 0.85rem 0;
+}
+
+.assignment-row:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.assignment-context,
+.prompt-cues {
+  background: #f4f7f5;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.assignment-context p,
+.prompt-cues p {
+  margin: 0.35rem 0 0;
 }
 
 .status {
@@ -170,9 +207,76 @@ textarea {
   padding: 0.75rem;
 }
 
+.inline-success {
+  background: #e5f3ea;
+  border: 1px solid #b8dfc7;
+  border-radius: 6px;
+  color: var(--good);
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;
+}
+
+.summary-strip {
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  margin: 0.75rem 0;
+}
+
+.summary-item {
+  padding: 0.65rem 0.75rem;
+}
+
+.summary-item span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.8rem;
+}
+
+.summary-item strong {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.evidence-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.evidence-pill.present {
+  background: #e5f3ea;
+  color: var(--good);
+}
+
+.evidence-pill.missing {
+  background: #f6f2e7;
+  color: var(--muted);
+}
+
+.details-panel {
+  margin-top: 0.85rem;
+}
+
+.details-panel summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
 }
 
 td,
@@ -181,6 +285,105 @@ th {
   padding: 0.6rem;
   text-align: left;
   vertical-align: top;
+}
+
+.thermo-section {
+  margin: 1rem 0;
+}
+
+.plot-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.plot-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.plot-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.plot-heading span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.thermo-plot {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.thermo-plot line {
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.thermo-plot path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.thermo-plot text {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.interpretation-notes {
+  margin: 1rem 0;
+}
+
+.note-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.note-card {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.note-card.supported {
+  border-left-color: var(--good);
+}
+
+.note-card.needs_review,
+.note-card.needs_context {
+  border-left-color: var(--warn);
+}
+
+.note-card.concern {
+  border-left-color: var(--bad);
+}
+
+.note-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.note-heading span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.note-card p {
+  margin: 0.45rem 0 0;
 }
 
 @media (max-width: 700px) {
@@ -193,4 +396,3 @@ th {
     padding: 1rem;
   }
 }
-

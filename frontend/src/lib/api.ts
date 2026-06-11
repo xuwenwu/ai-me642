@@ -2,7 +2,7 @@
 
 import { token } from './auth';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export class ApiError extends Error {
   status: number;
@@ -57,4 +57,3 @@ export async function download(path: string, filename: string) {
   link.click();
   URL.revokeObjectURL(link.href);
 }
-

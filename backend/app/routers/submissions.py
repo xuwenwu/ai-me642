@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 import re
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -32,6 +32,10 @@ FILE_TYPES = {
 def _clean_filename(filename: str) -> str:
     name = Path(filename).name
     return re.sub(r"[^A-Za-z0-9._-]+", "_", name) or "uploaded_file"
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _get_submission(db: Session, submission_id: int, user: User) -> Submission:
@@ -112,7 +116,7 @@ def submit(
     if user.role in {"instructor", "ta"}:
         raise HTTPException(status_code=403, detail="Only the student owner can submit")
     submission.status = "submitted"
-    submission.submitted_at = datetime.utcnow()
+    submission.submitted_at = _utc_now()
     db.commit()
     db.refresh(submission)
     return submission
@@ -144,7 +148,7 @@ async def upload_file(
 
     target_dir = settings.upload_root / f"submission_{submission.id}"
     target_dir.mkdir(parents=True, exist_ok=True)
-    stored_name = f"{file_type}_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
+    stored_name = f"{file_type}_{_utc_now().strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
     target_path = target_dir / stored_name
     target_path.write_bytes(content)
 
@@ -178,4 +182,3 @@ def package_submission(
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-

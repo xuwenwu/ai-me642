@@ -43,7 +43,12 @@ class AssignmentOut(BaseModel):
     due_date: str | None
     total_points: float
     status: str
-    criteria: list[RubricCriterionOut] = []
+    validation_profile: str
+    required_file_types: list[str] = Field(default_factory=list)
+    optional_file_types: list[str] = Field(default_factory=list)
+    validation_settings: dict = Field(default_factory=dict)
+    interpretation_prompts: list[str] = Field(default_factory=list)
+    criteria: list[RubricCriterionOut] = Field(default_factory=list)
 
 
 class ProjectSpecIn(BaseModel):
@@ -130,31 +135,31 @@ class ValidationCheckOut(BaseModel):
     created_at: datetime
 
 
+class ThermoSeriesOut(BaseModel):
+    source: str
+    x_field: str
+    columns: list[str]
+    points: list[dict[str, float]]
+
+
+class InterpretationNoteOut(BaseModel):
+    topic: str
+    status: str
+    message: str
+    evidence: str = ""
+
+
 class ValidationReportOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     status: str
     summary: str
+    validation_profile: str
     created_at: datetime
-    checks: list[ValidationCheckOut] = []
-
-
-class SubmissionOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    assignment_id: int
-    user_id: int
-    project_id: int | None
-    title: str
-    status: str
-    student_interpretation: str
-    submitted_at: datetime | None
-    created_at: datetime
-    updated_at: datetime
-    files: list[FileArtifactOut] = []
-    validation_reports: list[ValidationReportOut] = []
+    checks: list[ValidationCheckOut] = Field(default_factory=list)
+    thermo_series: list[ThermoSeriesOut] = Field(default_factory=list)
+    interpretation_notes: list[InterpretationNoteOut] = Field(default_factory=list)
 
 
 class CriterionScoreIn(BaseModel):
@@ -187,5 +192,33 @@ class GradeOut(BaseModel):
     final_score: float
     feedback: str
     graded_at: datetime
-    criterion_scores: list[CriterionScoreOut] = []
+    criterion_scores: list[CriterionScoreOut] = Field(default_factory=list)
 
+
+class GradeSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    rubric_score: float
+    late_penalty: float
+    final_score: float
+    feedback: str
+    graded_at: datetime
+
+
+class SubmissionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    assignment_id: int
+    user_id: int
+    project_id: int | None
+    title: str
+    status: str
+    student_interpretation: str
+    submitted_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    files: list[FileArtifactOut] = Field(default_factory=list)
+    validation_reports: list[ValidationReportOut] = Field(default_factory=list)
+    grade: GradeSummaryOut | None = None

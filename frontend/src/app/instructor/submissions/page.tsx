@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { InterpretationNotes } from '@/components/InterpretationNotes';
+import { ThermoPlots } from '@/components/ThermoPlots';
+import { EvidenceChecklist, ValidationSummary } from '@/components/ValidationSummary';
 import { api, download } from '@/lib/api';
 import type { Assignment, Submission } from '@/lib/types';
 
@@ -9,6 +12,11 @@ export default function InstructorSubmissionsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [assignmentFilter, setAssignmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [validationFilter, setValidationFilter] = useState('all');
+  const [gradeFilter, setGradeFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
   const [feedback, setFeedback] = useState('');
@@ -16,8 +24,32 @@ export default function InstructorSubmissionsPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
+  const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
+  const filteredSubmissions = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return submissions.filter((submission) => {
+      const assignment = assignmentById.get(submission.assignment_id);
+      const latestStatus = submission.validation_reports[0]?.status || 'not_run';
+      const graded = Boolean(submission.grade);
+      const text = `${submission.id} ${submission.user_id} ${submission.title} ${assignment?.title || ''}`.toLowerCase();
+      return (
+        (assignmentFilter === 'all' || submission.assignment_id === Number(assignmentFilter)) &&
+        (statusFilter === 'all' || submission.status === statusFilter) &&
+        (validationFilter === 'all' || latestStatus === validationFilter) &&
+        (gradeFilter === 'all' || (gradeFilter === 'graded' ? graded : !graded)) &&
+        (!needle || text.includes(needle))
+      );
+    });
+  }, [assignmentById, assignmentFilter, gradeFilter, search, statusFilter, submissions, validationFilter]);
+  const selected = useMemo(
+    () => submissions.find((submission) => submission.id === selectedId) || filteredSubmissions[0] || submissions[0],
+    [filteredSubmissions, selectedId, submissions],
+  );
   const assignment = useMemo(() => assignments.find((item) => item.id === selected?.assignment_id), [assignments, selected]);
+  const latestReport = selected?.validation_reports[0];
+  const submittedCount = submissions.filter((submission) => submission.status === 'submitted').length;
+  const needsGradingCount = submissions.filter((submission) => submission.status === 'submitted' && !submission.grade).length;
+  const warningCount = submissions.filter((submission) => submission.validation_reports[0]?.status === 'warning').length;
 
   async function load() {
     const [a, s] = await Promise.all([api<Assignment[]>('/assignments'), api<Submission[]>('/instructor/submissions')]);
@@ -62,9 +94,43 @@ export default function InstructorSubmissionsPage() {
       {error ? <div className="error">{error}</div> : null}
       {message ? <div className="success">{message}</div> : null}
       <section className="card">
-        <div className="row">
+        <div className="summary-strip">
+          <div className="summary-item"><span>Total</span><strong>{submissions.length}</strong></div>
+          <div className="summary-item"><span>Submitted</span><strong>{submittedCount}</strong></div>
+          <div className="summary-item"><span>Needs grading</span><strong>{needsGradingCount}</strong></div>
+          <div className="summary-item"><span>Warnings</span><strong>{warningCount}</strong></div>
+        </div>
+        <div className="filter-grid">
+          <label>Assignment<select value={assignmentFilter} onChange={(e) => setAssignmentFilter(e.target.value)}>
+            <option value="all">All assignments</option>
+            {assignments.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+          </select></label>
+          <label>Status<select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Submitted</option>
+          </select></label>
+          <label>Validation<select value={validationFilter} onChange={(e) => setValidationFilter(e.target.value)}>
+            <option value="all">All validation</option>
+            <option value="not_run">Not run</option>
+            <option value="passed">Passed</option>
+            <option value="warning">Warning</option>
+            <option value="failed">Failed</option>
+          </select></label>
+          <label>Grade<select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)}>
+            <option value="all">All grades</option>
+            <option value="ungraded">Ungraded</option>
+            <option value="graded">Graded</option>
+          </select></label>
+          <label>Search<input value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+        </div>
+        <div className="row" style={{ marginTop: '0.85rem' }}>
           <select value={selected?.id || ''} onChange={(e) => setSelectedId(Number(e.target.value))}>
-            {submissions.map((submission) => <option key={submission.id} value={submission.id}>#{submission.id} {submission.title}</option>)}
+            {filteredSubmissions.map((submission) => (
+              <option key={submission.id} value={submission.id}>
+                #{submission.id} {assignmentById.get(submission.assignment_id)?.title || 'Assignment'} - {submission.title}
+              </option>
+            ))}
           </select>
           <button className="secondary" onClick={() => download('/instructor/gradebook.csv', 'gradebook.csv')}>Download gradebook</button>
         </div>
@@ -72,10 +138,17 @@ export default function InstructorSubmissionsPage() {
       {selected ? (
         <div className="grid two" style={{ marginTop: '1rem' }}>
           <section className="card">
-            <h2>Submission Evidence</h2>
+            <div className="section-header">
+              <h2>Submission Evidence</h2>
+              <span className={`status ${latestReport?.status ?? ''}`}>{latestReport?.status ?? 'not run'}</span>
+            </div>
             <p><strong>{selected.title}</strong></p>
-            <p>Status: {selected.status}</p>
-            <p>Validation: {selected.validation_reports[0]?.status || 'not run'}</p>
+            <p>Status: {selected.status} - Grade: {selected.grade ? selected.grade.final_score : 'not graded'}</p>
+            <p className="muted">{assignment?.title || `Assignment ${selected.assignment_id}`} - {latestReport?.validation_profile || assignment?.validation_profile || 'profile not set'}</p>
+            <ValidationSummary submission={selected} report={latestReport} />
+            <EvidenceChecklist submission={selected} assignment={assignment} />
+            {latestReport ? <ThermoPlots series={latestReport.thermo_series} /> : null}
+            {latestReport ? <InterpretationNotes notes={latestReport.interpretation_notes} /> : null}
             <h3>Files</h3>
             {selected.files.map((file) => <p key={file.id}>{file.file_type}: {file.original_filename}</p>)}
             <h3>Student Interpretation</h3>
@@ -83,6 +156,7 @@ export default function InstructorSubmissionsPage() {
           </section>
           <section className="card">
             <h2>Rubric Grade</h2>
+            {selected.grade ? <p className="muted">Current final score: {selected.grade.final_score}</p> : null}
             <form className="form" onSubmit={saveGrade}>
               {assignment?.criteria.map((criterion) => (
                 <div key={criterion.id}>
@@ -100,4 +174,3 @@ export default function InstructorSubmissionsPage() {
     </AppShell>
   );
 }
-

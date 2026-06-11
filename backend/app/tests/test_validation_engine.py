@@ -16,17 +16,21 @@ def make_db():
     return sessionmaker(bind=engine)()
 
 
-def base_submission(db, log_name="sample_good_nve.log"):
+def base_submission(db, log_name="sample_good_nve.log", validation_profile="nve_energy_conservation"):
     user = User(email="student@example.edu", full_name="Ada Student", role="student", hashed_password=hash_password("password123"))
     course = Course(code="ME642", title="Materials Modeling", term="Spring 2026")
     db.add_all([user, course])
     db.flush()
     assignment = Assignment(
         course_id=course.id,
-        title="Lab 3: NVE Energy Conservation and Timestep Stability",
+        title="Lab 3: NVE Energy Conservation and Timestep Stability" if validation_profile == "nve_energy_conservation" else "Lab 2: NVT Temperature Control",
         description="Test",
         assignment_type="lab",
         total_points=100,
+        validation_profile=validation_profile,
+        validation_settings_json='{"energy_drift_warning_threshold": 0.05}' if validation_profile == "nve_energy_conservation" else '{"target_temperature": 300, "temperature_tolerance": 75}',
+        required_file_types_json='["lammps_input", "lammps_log"]',
+        optional_file_types_json='["readme", "prompt_log", "python_analysis", "figure"]',
     )
     db.add(assignment)
     db.flush()
@@ -81,6 +85,27 @@ def test_validation_good_log_has_no_failed_checks():
     assert report.status == "warning"
     assert not [check for check in report.checks if check.status == "failed"]
     assert any(check.check_type == "energy_drift" for check in report.checks)
+    assert report.thermo_series
+    assert report.thermo_series[0]["x_field"] == "Step"
+    assert "TotEng" in report.thermo_series[0]["columns"]
+    assert report.thermo_series[0]["points"]
+    assert report.interpretation_notes
+    assert any(note["topic"] == "Energy conservation" for note in report.interpretation_notes)
+    assert any(note["status"] == "supported" for note in report.interpretation_notes)
+
+
+def test_validation_nvt_profile_adds_temperature_control_check():
+    db = make_db()
+    submission = base_submission(db, validation_profile="nvt_temperature_control")
+
+    report = validate_submission(db, submission)
+
+    check_types = {check.check_type for check in report.checks}
+    note_topics = {note["topic"] for note in report.interpretation_notes}
+    assert report.validation_profile == "nvt_temperature_control"
+    assert "nvt_temperature_control" in check_types
+    assert "energy_drift" not in check_types
+    assert "NVT temperature control" in note_topics
 
 
 def test_validation_error_log_fails():
@@ -91,4 +116,4 @@ def test_validation_error_log_fails():
 
     assert report.status == "failed"
     assert any(check.check_type == "lammps_log_health" and check.status == "failed" for check in report.checks)
-
+    assert any(note["topic"] == "LAMMPS log health" and note["status"] == "concern" for note in report.interpretation_notes)

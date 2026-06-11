@@ -93,6 +93,8 @@ def build_submission_zip(db: Session, submission: Submission) -> bytes:
                         }
                         for c in (latest_report.checks if latest_report else [])
                     ],
+                    "thermo_series": latest_report.thermo_series if latest_report else [],
+                    "interpretation_notes": latest_report.interpretation_notes if latest_report else [],
                 },
                 indent=2,
             ),
@@ -103,4 +105,3 @@ def build_submission_zip(db: Session, submission: Submission) -> bytes:
                 zf.write(path, f"artifacts/{artifact.file_type}/{artifact.original_filename}")
 
     return buffer.getvalue()
-

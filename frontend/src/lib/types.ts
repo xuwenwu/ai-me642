@@ -112,3 +112,57 @@ export type Submission = {
   validation_reports: ValidationReport[];
   grade: GradeSummary | null;
 };
+
+export type AssignmentAnalytics = {
+  assignment_id: number;
+  title: string;
+  due_date: string | null;
+  total_students: number;
+  missing_count: number;
+  draft_count: number;
+  submitted_count: number;
+  validation_not_run_count: number;
+  validation_warning_count: number;
+  validation_failed_count: number;
+  graded_count: number;
+  ungraded_submitted_count: number;
+  needs_attention_count: number;
+};
+
+export type NeedsAttention = {
+  submission_id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  assignment_id: number;
+  assignment_title: string;
+  status: string;
+  validation_status: string;
+  grade_state: string;
+  reasons: string[];
+  updated_at: string;
+};
+
+export type InstructorAnalytics = {
+  total_students: number;
+  total_assignments: number;
+  total_submissions: number;
+  submitted_count: number;
+  graded_count: number;
+  needs_attention_count: number;
+  assignments: AssignmentAnalytics[];
+  needs_attention: NeedsAttention[];
+};
+
+export type RosterStudent = {
+  student_id: number;
+  full_name: string;
+  email: string;
+  section: string;
+  total_assignments: number;
+  submissions_count: number;
+  submitted_count: number;
+  graded_count: number;
+  warning_count: number;
+  missing_count: number;
+};

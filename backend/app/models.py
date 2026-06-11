@@ -31,6 +31,35 @@ class Course(Base):
     description: Mapped[str] = mapped_column(Text, default="")
 
 
+class Section(Base):
+    __tablename__ = "sections"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    name: Mapped[str] = mapped_column(String(128))
+    term: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+    course = relationship("Course")
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    __table_args__ = (UniqueConstraint("course_id", "user_id", name="uq_enrollment_course_user"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    section_id: Mapped[int | None] = mapped_column(ForeignKey("sections.id"), nullable=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    role: Mapped[str] = mapped_column(String(32), default="student")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+    course = relationship("Course")
+    section = relationship("Section")
+    user = relationship("User")
+
+
 class Assignment(Base):
     __tablename__ = "assignments"
 

@@ -19,12 +19,15 @@ Use this checklist when reviewing the app for a small real-class pilot.
 ## Instructor Flow
 
 1. Sign in as `instructor@example.edu` or `ta@example.edu`.
-2. Open Instructor Review.
-3. Use the assignment, submission status, validation status, grade state, and search filters.
-4. Select the submitted Lab 3 package.
-5. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
-6. Enter rubric scores and save a grade.
-7. Download `gradebook.csv` and confirm the submission row includes validation and grade values.
+2. Open Instructor Overview.
+3. Confirm assignment analytics, needs-attention rows, and roster readiness appear.
+4. Open Instructor Review.
+5. Use the assignment, submission status, validation status, grade state, and search filters.
+6. Select the submitted Lab 3 package.
+7. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
+8. Enter rubric scores and save a grade.
+9. Confirm the grade-save message appears beside the rubric form.
+10. Download `gradebook.csv` and confirm the submission row includes validation, section, and grade values.
 
 ## Backend Checks
 
@@ -48,3 +51,4 @@ npm run build
 - Automated validation is advisory evidence, not a grade.
 - No live LLM calls are made.
 - Canvas, sections, TA assignment, and cohort analytics remain future work.
+- Canvas, TA assignment, and richer AI-disclosure analytics remain future work.

@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import json
 from sqlalchemy.orm import Session
 from ..auth import hash_password
-from ..models import Assignment, Course, Rubric, RubricCriterion, User
+from ..models import Assignment, Course, Enrollment, Rubric, RubricCriterion, Section, User
 
 
 USERS = [
@@ -83,9 +83,14 @@ ASSIGNMENTS = [
 
 
 def seed(db: Session) -> None:
+    users_by_email: dict[str, User] = {}
     for email, full_name, role in USERS:
-        if not db.query(User).filter_by(email=email).first():
-            db.add(User(email=email, full_name=full_name, role=role, hashed_password=hash_password("password123")))
+        user = db.query(User).filter_by(email=email).first()
+        if not user:
+            user = User(email=email, full_name=full_name, role=role, hashed_password=hash_password("password123"))
+            db.add(user)
+            db.flush()
+        users_by_email[email] = user
 
     course = db.query(Course).filter_by(code="ME642").first()
     if not course:
@@ -97,6 +102,22 @@ def seed(db: Session) -> None:
         )
         db.add(course)
         db.flush()
+
+    section = db.query(Section).filter_by(course_id=course.id, name="Pilot Section A").first()
+    if not section:
+        section = Section(course_id=course.id, name="Pilot Section A", term=course.term)
+        db.add(section)
+        db.flush()
+
+    for email, _, role in USERS:
+        user = users_by_email[email]
+        enrollment = db.query(Enrollment).filter_by(course_id=course.id, user_id=user.id).first()
+        if not enrollment:
+            enrollment = Enrollment(course_id=course.id, user_id=user.id)
+            db.add(enrollment)
+        enrollment.section_id = section.id
+        enrollment.role = role
+        enrollment.status = "active"
 
     for item in ASSIGNMENTS:
         assignment = db.query(Assignment).filter_by(title=item["title"]).first()

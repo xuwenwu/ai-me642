@@ -222,3 +222,57 @@ class SubmissionOut(BaseModel):
     files: list[FileArtifactOut] = Field(default_factory=list)
     validation_reports: list[ValidationReportOut] = Field(default_factory=list)
     grade: GradeSummaryOut | None = None
+
+
+class AssignmentAnalyticsOut(BaseModel):
+    assignment_id: int
+    title: str
+    due_date: str | None
+    total_students: int
+    missing_count: int
+    draft_count: int
+    submitted_count: int
+    validation_not_run_count: int
+    validation_warning_count: int
+    validation_failed_count: int
+    graded_count: int
+    ungraded_submitted_count: int
+    needs_attention_count: int
+
+
+class NeedsAttentionOut(BaseModel):
+    submission_id: int
+    student_id: int
+    student_name: str
+    student_email: str
+    assignment_id: int
+    assignment_title: str
+    status: str
+    validation_status: str
+    grade_state: str
+    reasons: list[str] = Field(default_factory=list)
+    updated_at: datetime
+
+
+class InstructorAnalyticsOut(BaseModel):
+    total_students: int
+    total_assignments: int
+    total_submissions: int
+    submitted_count: int
+    graded_count: int
+    needs_attention_count: int
+    assignments: list[AssignmentAnalyticsOut] = Field(default_factory=list)
+    needs_attention: list[NeedsAttentionOut] = Field(default_factory=list)
+
+
+class RosterStudentOut(BaseModel):
+    student_id: int
+    full_name: str
+    email: str
+    section: str
+    total_assignments: int
+    submissions_count: int
+    submitted_count: int
+    graded_count: int
+    warning_count: int
+    missing_count: int

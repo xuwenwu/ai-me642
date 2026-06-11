@@ -116,6 +116,34 @@ class PromptLogOut(PromptLogIn):
     created_at: datetime
 
 
+class AIPolicyIn(BaseModel):
+    title: str = Field(min_length=1)
+    body: str = ""
+    allowed_tools: list[str] = Field(default_factory=list)
+    disclosure_requirements: list[str] = Field(default_factory=list)
+
+
+class AIPolicyOut(AIPolicyIn):
+    id: int
+    course_id: int
+    updated_at: datetime
+
+
+class PromptTemplateIn(BaseModel):
+    title: str = Field(min_length=1)
+    task_type: str = "lammps_debugging"
+    prompt_text: str = ""
+    checklist: list[str] = Field(default_factory=list)
+    status: str = "active"
+
+
+class PromptTemplateOut(PromptTemplateIn):
+    id: int
+    course_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class SubmissionCreate(BaseModel):
     assignment_id: int
     project_id: int | None = None
@@ -249,6 +277,7 @@ class AssignmentAnalyticsOut(BaseModel):
     validation_not_run_count: int
     validation_warning_count: int
     validation_failed_count: int
+    ai_disclosure_missing_count: int
     graded_count: int
     ungraded_submitted_count: int
     needs_attention_count: int
@@ -275,6 +304,7 @@ class InstructorAnalyticsOut(BaseModel):
     submitted_count: int
     graded_count: int
     needs_attention_count: int
+    ai_disclosure_missing_count: int
     assignments: list[AssignmentAnalyticsOut] = Field(default_factory=list)
     needs_attention: list[NeedsAttentionOut] = Field(default_factory=list)
 

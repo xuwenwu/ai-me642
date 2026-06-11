@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from ..auth import hash_password
 from ..database import get_db
 from ..deps import staff_user
-from ..models import Assignment, Course, CriterionScore, Enrollment, Grade, Rubric, RubricCriterion, Section, Submission, User
+from ..models import AIPolicy, Assignment, Course, CriterionScore, Enrollment, Grade, PromptLogEntry, PromptTemplate, Rubric, RubricCriterion, Section, Submission, User
 from ..schemas import (
+    AIPolicyIn,
+    AIPolicyOut,
     AssignmentManageIn,
     AssignmentAnalyticsOut,
     AssignmentOut,
@@ -17,6 +19,8 @@ from ..schemas import (
     GradeOut,
     InstructorAnalyticsOut,
     NeedsAttentionOut,
+    PromptTemplateIn,
+    PromptTemplateOut,
     RosterImportIn,
     RosterImportOut,
     RosterStudentIn,
@@ -42,6 +46,41 @@ def _latest_validation_status(submission: Submission) -> str:
     return submission.validation_reports[0].status if submission.validation_reports else "not_run"
 
 
+def _prompt_logs_for_submission(db: Session, submission: Submission) -> list[PromptLogEntry]:
+    return (
+        db.query(PromptLogEntry)
+        .filter(
+            PromptLogEntry.user_id == submission.user_id,
+            (PromptLogEntry.assignment_id == submission.assignment_id) | (PromptLogEntry.project_id == submission.project_id),
+        )
+        .all()
+    )
+
+
+def _has_uploaded_prompt_log(submission: Submission) -> bool:
+    return any(file.file_type == "prompt_log" for file in submission.files)
+
+
+def _ai_disclosure_needs_attention(db: Session, submission: Submission) -> bool:
+    if _has_uploaded_prompt_log(submission):
+        return False
+    prompts = _prompt_logs_for_submission(db, submission)
+    if not prompts:
+        return True
+    for prompt in prompts:
+        quality_fields = [
+            prompt.ai_output_summary,
+            prompt.accepted_parts,
+            prompt.rejected_parts,
+            prompt.manual_edits,
+            prompt.validation_performed,
+            prompt.remaining_concerns,
+        ]
+        if sum(1 for value in quality_fields if value.strip()) >= 3:
+            return False
+    return True
+
+
 def _attention_reasons(submission: Submission) -> list[str]:
     reasons: list[str] = []
     latest_status = _latest_validation_status(submission)
@@ -60,6 +99,13 @@ def _attention_reasons(submission: Submission) -> list[str]:
     for file_type in submission.assignment.required_file_types:
         if file_type not in file_types:
             reasons.append(f"missing {file_type}")
+    return reasons
+
+
+def _attention_reasons_with_ai(db: Session, submission: Submission) -> list[str]:
+    reasons = _attention_reasons(submission)
+    if _ai_disclosure_needs_attention(db, submission):
+        reasons.append("missing or thin AI disclosure")
     return reasons
 
 
@@ -126,6 +172,70 @@ def _assignment_out(assignment: Assignment) -> AssignmentOut:
         interpretation_prompts=assignment.interpretation_prompts,
         criteria=[RubricCriterionOut.model_validate(c) for c in criteria],
     )
+
+
+def _policy_out(policy: AIPolicy) -> AIPolicyOut:
+    return AIPolicyOut(
+        id=policy.id,
+        course_id=policy.course_id,
+        title=policy.title,
+        body=policy.body,
+        allowed_tools=policy.allowed_tools,
+        disclosure_requirements=policy.disclosure_requirements,
+        updated_at=policy.updated_at,
+    )
+
+
+def _template_out(template: PromptTemplate) -> PromptTemplateOut:
+    return PromptTemplateOut(
+        id=template.id,
+        course_id=template.course_id,
+        title=template.title,
+        task_type=template.task_type,
+        prompt_text=template.prompt_text,
+        checklist=template.checklist,
+        status=template.status,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )
+
+
+def _ensure_policy(db: Session) -> AIPolicy:
+    course = _default_course(db)
+    policy = db.query(AIPolicy).filter_by(course_id=course.id).first()
+    if not policy:
+        policy = AIPolicy(
+            course_id=course.id,
+            title="ME642 Responsible AI Use Policy",
+            body="AI assistance is allowed when students disclose the work, verify outputs, and keep responsibility for final scientific claims.",
+            disclosure_requirements_json=json.dumps(
+                [
+                    "Record the AI tool, task purpose, and prompt or prompt summary.",
+                    "Summarize the AI output in your own words.",
+                    "Identify accepted and rejected suggestions.",
+                    "Describe manual edits and validation performed after AI assistance.",
+                    "State remaining concerns or uncertainties before submission.",
+                ]
+            ),
+        )
+        db.add(policy)
+        db.flush()
+    return policy
+
+
+def _apply_policy_payload(policy: AIPolicy, payload: AIPolicyIn) -> None:
+    policy.title = payload.title.strip()
+    policy.body = payload.body
+    policy.allowed_tools_json = json.dumps(payload.allowed_tools)
+    policy.disclosure_requirements_json = json.dumps(payload.disclosure_requirements)
+
+
+def _apply_template_payload(template: PromptTemplate, payload: PromptTemplateIn) -> None:
+    template.title = payload.title.strip()
+    template.task_type = payload.task_type.strip() or "lammps_debugging"
+    template.prompt_text = payload.prompt_text
+    template.checklist_json = json.dumps(payload.checklist)
+    template.status = payload.status or "active"
 
 
 def _apply_assignment_payload(assignment: Assignment, payload: AssignmentManageIn) -> None:
@@ -261,6 +371,68 @@ def update_assignment(
     return _assignment_out(assignment)
 
 
+@router.get("/ai-policy", response_model=AIPolicyOut)
+def get_ai_policy(
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> AIPolicyOut:
+    return _policy_out(_ensure_policy(db))
+
+
+@router.patch("/ai-policy", response_model=AIPolicyOut)
+def update_ai_policy(
+    payload: AIPolicyIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> AIPolicyOut:
+    policy = _ensure_policy(db)
+    _apply_policy_payload(policy, payload)
+    db.commit()
+    db.refresh(policy)
+    return _policy_out(policy)
+
+
+@router.get("/prompt-templates", response_model=list[PromptTemplateOut])
+def get_prompt_templates(
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> list[PromptTemplateOut]:
+    course = _default_course(db)
+    rows = db.query(PromptTemplate).filter_by(course_id=course.id).order_by(PromptTemplate.task_type, PromptTemplate.title).all()
+    return [_template_out(row) for row in rows]
+
+
+@router.post("/prompt-templates", response_model=PromptTemplateOut)
+def create_prompt_template(
+    payload: PromptTemplateIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> PromptTemplateOut:
+    course = _default_course(db)
+    template = PromptTemplate(course_id=course.id, title=payload.title)
+    _apply_template_payload(template, payload)
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    return _template_out(template)
+
+
+@router.patch("/prompt-templates/{template_id}", response_model=PromptTemplateOut)
+def update_prompt_template(
+    template_id: int,
+    payload: PromptTemplateIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> PromptTemplateOut:
+    template = db.get(PromptTemplate, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Prompt template not found")
+    _apply_template_payload(template, payload)
+    db.commit()
+    db.refresh(template)
+    return _template_out(template)
+
+
 @router.get("/analytics", response_model=InstructorAnalyticsOut)
 def instructor_analytics(
     db: Session = Depends(get_db),
@@ -292,12 +464,13 @@ def instructor_analytics(
         validation_not_run_count = sum(1 for row in rows if _latest_validation_status(row) == "not_run")
         validation_warning_count = sum(1 for row in rows if _latest_validation_status(row) == "warning")
         validation_failed_count = sum(1 for row in rows if _latest_validation_status(row) == "failed")
+        ai_disclosure_missing_count = sum(1 for row in rows if _ai_disclosure_needs_attention(db, row))
         graded_count = sum(1 for row in rows if row.grade)
         ungraded_submitted_count = sum(1 for row in rows if row.status == "submitted" and not row.grade)
         needs_attention_count = missing_count
 
         for row in rows:
-            reasons = _attention_reasons(row)
+            reasons = _attention_reasons_with_ai(db, row)
             if reasons:
                 needs_attention_count += 1
                 attention_items.append(
@@ -328,6 +501,7 @@ def instructor_analytics(
                 validation_not_run_count=validation_not_run_count,
                 validation_warning_count=validation_warning_count,
                 validation_failed_count=validation_failed_count,
+                ai_disclosure_missing_count=ai_disclosure_missing_count,
                 graded_count=graded_count,
                 ungraded_submitted_count=ungraded_submitted_count,
                 needs_attention_count=needs_attention_count,
@@ -342,6 +516,7 @@ def instructor_analytics(
         submitted_count=sum(1 for row in submissions if row.status == "submitted"),
         graded_count=sum(1 for row in submissions if row.grade),
         needs_attention_count=sum(item.needs_attention_count for item in assignment_summaries),
+        ai_disclosure_missing_count=sum(item.ai_disclosure_missing_count for item in assignment_summaries),
         assignments=assignment_summaries,
         needs_attention=attention_items,
     )

@@ -60,6 +60,48 @@ class Enrollment(Base):
     user = relationship("User")
 
 
+class AIPolicy(Base):
+    __tablename__ = "ai_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), unique=True)
+    title: Mapped[str] = mapped_column(String(255), default="Responsible AI Use Policy")
+    body: Mapped[str] = mapped_column(Text, default="")
+    allowed_tools_json: Mapped[str] = mapped_column(Text, default="[]")
+    disclosure_requirements_json: Mapped[str] = mapped_column(Text, default="[]")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+    course = relationship("Course")
+
+    @property
+    def allowed_tools(self) -> list[str]:
+        return _json_list(self.allowed_tools_json, [])
+
+    @property
+    def disclosure_requirements(self) -> list[str]:
+        return _json_list(self.disclosure_requirements_json, [])
+
+
+class PromptTemplate(Base):
+    __tablename__ = "prompt_templates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    title: Mapped[str] = mapped_column(String(255))
+    task_type: Mapped[str] = mapped_column(String(64), default="lammps_debugging")
+    prompt_text: Mapped[str] = mapped_column(Text, default="")
+    checklist_json: Mapped[str] = mapped_column(Text, default="[]")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+    course = relationship("Course")
+
+    @property
+    def checklist(self) -> list[str]:
+        return _json_list(self.checklist_json, [])
+
+
 class Assignment(Base):
     __tablename__ = "assignments"
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { fileTypeLabels } from '@/components/ValidationSummary';
 import { api } from '@/lib/api';
-import type { Assignment, AssignmentManageInput, RosterImportResult, RosterStudent } from '@/lib/types';
+import type { AIPolicy, AIPolicyInput, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
 
 const fileTypes = ['lammps_input', 'lammps_log', 'readme', 'prompt_log', 'python_analysis', 'ovito_script', 'figure', 'data', 'other'];
 const validationProfiles = ['lammps_basic_health', 'nvt_temperature_control', 'nve_energy_conservation'];
@@ -22,6 +22,21 @@ const emptyAssignment: AssignmentManageInput = {
   optional_file_types: ['readme', 'prompt_log'],
   validation_settings: {},
   interpretation_prompts: [],
+};
+
+const emptyPolicy: AIPolicyInput = {
+  title: 'ME642 Responsible AI Use Policy',
+  body: '',
+  allowed_tools: [],
+  disclosure_requirements: [],
+};
+
+const emptyTemplate: PromptTemplateInput = {
+  title: '',
+  task_type: 'lammps_debugging',
+  prompt_text: '',
+  checklist: [],
+  status: 'active',
 };
 
 function assignmentForm(assignment: Assignment | undefined): AssignmentManageInput {
@@ -45,13 +60,36 @@ function toggleValue(values: string[], value: string) {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
+function linesToList(value: string) {
+  return value.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function templateForm(template: PromptTemplate | undefined): PromptTemplateInput {
+  if (!template) return emptyTemplate;
+  return {
+    title: template.title,
+    task_type: template.task_type,
+    prompt_text: template.prompt_text,
+    checklist: template.checklist,
+    status: template.status,
+  };
+}
+
 export default function InstructorSetupPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [roster, setRoster] = useState<RosterStudent[]>([]);
+  const [policy, setPolicy] = useState<AIPolicy | null>(null);
+  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('new');
   const [assignmentFormState, setAssignmentFormState] = useState<AssignmentManageInput>(emptyAssignment);
   const [settingsText, setSettingsText] = useState('{}');
   const [promptsText, setPromptsText] = useState('');
+  const [policyForm, setPolicyForm] = useState<AIPolicyInput>(emptyPolicy);
+  const [allowedToolsText, setAllowedToolsText] = useState('');
+  const [requirementsText, setRequirementsText] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('new');
+  const [templateFormState, setTemplateFormState] = useState<PromptTemplateInput>(emptyTemplate);
+  const [templateChecklistText, setTemplateChecklistText] = useState('');
   const [studentForm, setStudentForm] = useState({ full_name: '', email: '', section: 'Pilot Section A', password: 'password123' });
   const [csvText, setCsvText] = useState('full_name,email,section\n');
   const [message, setMessage] = useState('');
@@ -62,11 +100,22 @@ export default function InstructorSetupPage() {
     () => assignments.find((assignment) => assignment.id === Number(selectedAssignmentId)),
     [assignments, selectedAssignmentId],
   );
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === Number(selectedTemplateId)),
+    [templates, selectedTemplateId],
+  );
 
   async function load() {
-    const [a, r] = await Promise.all([api<Assignment[]>('/instructor/assignments'), api<RosterStudent[]>('/instructor/roster')]);
+    const [a, r, aiPolicy, t] = await Promise.all([
+      api<Assignment[]>('/instructor/assignments'),
+      api<RosterStudent[]>('/instructor/roster'),
+      api<AIPolicy>('/instructor/ai-policy'),
+      api<PromptTemplate[]>('/instructor/prompt-templates'),
+    ]);
     setAssignments(a);
     setRoster(r);
+    setPolicy(aiPolicy);
+    setTemplates(t);
   }
 
   useEffect(() => {
@@ -79,6 +128,24 @@ export default function InstructorSetupPage() {
     setSettingsText(JSON.stringify(next.validation_settings, null, 2));
     setPromptsText(next.interpretation_prompts.join('\n'));
   }, [selectedAssignment]);
+
+  useEffect(() => {
+    const next = policy ? {
+      title: policy.title,
+      body: policy.body,
+      allowed_tools: policy.allowed_tools,
+      disclosure_requirements: policy.disclosure_requirements,
+    } : emptyPolicy;
+    setPolicyForm(next);
+    setAllowedToolsText(next.allowed_tools.join('\n'));
+    setRequirementsText(next.disclosure_requirements.join('\n'));
+  }, [policy]);
+
+  useEffect(() => {
+    const next = templateForm(selectedTemplate);
+    setTemplateFormState(next);
+    setTemplateChecklistText(next.checklist.join('\n'));
+  }, [selectedTemplate]);
 
   async function saveAssignment(event: React.FormEvent) {
     event.preventDefault();
@@ -101,6 +168,48 @@ export default function InstructorSetupPage() {
       setMessage(`Saved assignment: ${saved.title}`);
     } catch (err) {
       setError(err instanceof SyntaxError ? 'Validation settings must be valid JSON.' : err instanceof Error ? err.message : 'Failed to save assignment');
+    }
+  }
+
+  async function savePolicy(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      const saved = await api<AIPolicy>('/instructor/ai-policy', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...policyForm,
+          title: policyForm.title.trim(),
+          allowed_tools: linesToList(allowedToolsText),
+          disclosure_requirements: linesToList(requirementsText),
+        }),
+      });
+      setPolicy(saved);
+      setMessage(`Saved AI policy: ${saved.title}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save AI policy');
+    }
+  }
+
+  async function saveTemplate(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      const payload = {
+        ...templateFormState,
+        title: templateFormState.title.trim(),
+        checklist: linesToList(templateChecklistText),
+      };
+      const path = selectedTemplate ? `/instructor/prompt-templates/${selectedTemplate.id}` : '/instructor/prompt-templates';
+      const method = selectedTemplate ? 'PATCH' : 'POST';
+      const saved = await api<PromptTemplate>(path, { method, body: JSON.stringify(payload) });
+      await load();
+      setSelectedTemplateId(String(saved.id));
+      setMessage(`Saved prompt template: ${saved.title}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save prompt template');
     }
   }
 
@@ -207,6 +316,40 @@ export default function InstructorSetupPage() {
               {importResult.errors.map((item) => <p key={item} className="muted">{item}</p>)}
             </div>
           ) : null}
+        </section>
+      </div>
+
+      <div className="grid two" style={{ marginTop: '1rem' }}>
+        <section className="card">
+          <h2>AI Policy</h2>
+          <form className="form" onSubmit={savePolicy}>
+            <label>Title<input value={policyForm.title} onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })} required /></label>
+            <label>Policy body<textarea value={policyForm.body} onChange={(e) => setPolicyForm({ ...policyForm, body: e.target.value })} /></label>
+            <label>Allowed tools<textarea value={allowedToolsText} onChange={(e) => setAllowedToolsText(e.target.value)} placeholder="One tool per line" /></label>
+            <label>Disclosure requirements<textarea value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} placeholder="One requirement per line" /></label>
+            <button>Save AI policy</button>
+          </form>
+        </section>
+
+        <section className="card">
+          <h2>Prompt Templates</h2>
+          <label>Template<select value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
+            <option value="new">New template</option>
+            {templates.map((template) => <option key={template.id} value={template.id}>{template.title}</option>)}
+          </select></label>
+          <form className="form" onSubmit={saveTemplate} style={{ marginTop: '0.85rem' }}>
+            <label>Title<input value={templateFormState.title} onChange={(e) => setTemplateFormState({ ...templateFormState, title: e.target.value })} required /></label>
+            <div className="filter-grid">
+              <label>Task type<input value={templateFormState.task_type} onChange={(e) => setTemplateFormState({ ...templateFormState, task_type: e.target.value })} /></label>
+              <label>Status<select value={templateFormState.status} onChange={(e) => setTemplateFormState({ ...templateFormState, status: e.target.value })}>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+              </select></label>
+            </div>
+            <label>Prompt text<textarea value={templateFormState.prompt_text} onChange={(e) => setTemplateFormState({ ...templateFormState, prompt_text: e.target.value })} /></label>
+            <label>Checklist<textarea value={templateChecklistText} onChange={(e) => setTemplateChecklistText(e.target.value)} placeholder="One checklist item per line" /></label>
+            <button>{selectedTemplate ? 'Save template' : 'Create template'}</button>
+          </form>
         </section>
       </div>
 

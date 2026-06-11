@@ -57,12 +57,56 @@ export type ProjectSpec = {
 
 export type PromptLog = {
   id: number;
+  assignment_id: number | null;
+  project_id: number | null;
   title: string;
   ai_tool_name: string;
   task_type: string;
   prompt_text: string;
+  ai_output_summary: string;
+  accepted_parts: string;
+  rejected_parts: string;
+  manual_edits: string;
   validation_performed: string;
   remaining_concerns: string;
+  created_at: string;
+};
+
+export type AIPolicy = {
+  id: number;
+  course_id: number;
+  title: string;
+  body: string;
+  allowed_tools: string[];
+  disclosure_requirements: string[];
+  updated_at: string;
+};
+
+export type AIPolicyInput = {
+  title: string;
+  body: string;
+  allowed_tools: string[];
+  disclosure_requirements: string[];
+};
+
+export type PromptTemplate = {
+  id: number;
+  course_id: number;
+  title: string;
+  task_type: string;
+  prompt_text: string;
+  checklist: string[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PromptTemplateInput = {
+  title: string;
+  task_type: string;
+  prompt_text: string;
+  checklist: string[];
+  status: string;
 };
 
 export type FileArtifact = {
@@ -138,6 +182,7 @@ export type AssignmentAnalytics = {
   validation_not_run_count: number;
   validation_warning_count: number;
   validation_failed_count: number;
+  ai_disclosure_missing_count: number;
   graded_count: number;
   ungraded_submitted_count: number;
   needs_attention_count: number;
@@ -164,6 +209,7 @@ export type InstructorAnalytics = {
   submitted_count: number;
   graded_count: number;
   needs_attention_count: number;
+  ai_disclosure_missing_count: number;
   assignments: AssignmentAnalytics[];
   needs_attention: NeedsAttention[];
 };

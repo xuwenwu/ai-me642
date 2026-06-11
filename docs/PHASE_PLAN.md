@@ -43,8 +43,10 @@
 
 - Instructor AI-use policy configuration.
 - Prompt templates by task type.
-- Rubric analytics for AI disclosure quality.
-- AI-disclosure quality dashboards.
+- Student-facing policy, allowed-tool list, disclosure checklist, and template picker on AI Prompt Logs.
+- Submission AI-disclosure cue connected to validation evidence.
+- Instructor analytics for missing or thin AI disclosure.
+- Course Setup controls for policy and template authoring.
 
 ## Phase VI: Rich Scientific Validation
 

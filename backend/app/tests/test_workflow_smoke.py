@@ -57,6 +57,15 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert assignment["interpretation_prompts"]
             assignment_id = assignment["id"]
 
+            public_policy = client.get("/api/prompt-logs/policy", headers=student_headers)
+            assert public_policy.status_code == 200
+            assert public_policy.json()["disclosure_requirements"]
+            assert "Responsible AI" in public_policy.json()["title"]
+
+            public_templates = client.get("/api/prompt-logs/templates", headers=student_headers)
+            assert public_templates.status_code == 200
+            assert any(item["task_type"] == "lammps_debugging" for item in public_templates.json())
+
             project = client.post(
                 "/api/projects",
                 headers=student_headers,
@@ -168,9 +177,11 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             analytics_body = analytics.json()
             lab3_summary = next(item for item in analytics_body["assignments"] if item["assignment_id"] == assignment_id)
             assert analytics_body["total_students"] == 2
+            assert analytics_body["ai_disclosure_missing_count"] >= 0
             assert lab3_summary["submitted_count"] == 1
             assert lab3_summary["missing_count"] == 1
             assert lab3_summary["validation_warning_count"] == 1
+            assert lab3_summary["ai_disclosure_missing_count"] == 0
             assert lab3_summary["ungraded_submitted_count"] == 1
             assert analytics_body["needs_attention"]
 
@@ -213,6 +224,42 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             visible_assignments = client.get("/api/assignments", headers=student_headers)
             assert visible_assignments.status_code == 200
             assert any(item["title"] == "Lab 4: Edited Authoring Smoke" for item in visible_assignments.json())
+
+            instructor_policy = client.get("/api/instructor/ai-policy", headers=instructor_headers)
+            assert instructor_policy.status_code == 200
+            policy_payload = instructor_policy.json()
+            edited_policy = client.patch(
+                "/api/instructor/ai-policy",
+                headers=instructor_headers,
+                json={
+                    **policy_payload,
+                    "body": policy_payload["body"] + " Smoke-test policy update.",
+                    "allowed_tools": policy_payload["allowed_tools"] + ["ME642 Test Assistant"],
+                },
+            )
+            assert edited_policy.status_code == 200
+            assert "Smoke-test policy update" in edited_policy.json()["body"]
+
+            managed_template = client.post(
+                "/api/instructor/prompt-templates",
+                headers=instructor_headers,
+                json={
+                    "title": "Smoke template",
+                    "task_type": "data_analysis",
+                    "prompt_text": "Help check evidence before interpreting data.",
+                    "checklist": ["Check units", "State uncertainty"],
+                    "status": "active",
+                },
+            )
+            assert managed_template.status_code == 200
+            edited_template = client.patch(
+                f"/api/instructor/prompt-templates/{managed_template.json()['id']}",
+                headers=instructor_headers,
+                json={**managed_template.json(), "title": "Edited smoke template"},
+            )
+            assert edited_template.status_code == 200
+            student_templates = client.get("/api/prompt-logs/templates", headers=student_headers)
+            assert any(item["title"] == "Edited smoke template" for item in student_templates.json())
 
             roster_student = client.post(
                 "/api/instructor/roster/students",

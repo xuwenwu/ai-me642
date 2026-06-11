@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
@@ -37,6 +38,8 @@ export default function SubmissionsPage() {
   const selectedAssignment = useMemo(() => assignments.find((assignment) => assignment.id === selected?.assignment_id), [assignments, selected]);
   const draftAssignment = useMemo(() => assignments.find((assignment) => assignment.id === Number(createForm.assignment_id)), [assignments, createForm.assignment_id]);
   const latestReport = selected?.validation_reports[0];
+  const aiDisclosureCheck = latestReport?.checks.find((check) => check.check_type === 'ai_disclosure');
+  const aiDisclosureNote = latestReport?.interpretation_notes.find((note) => note.topic === 'AI disclosure');
   const nextAction = nextSubmissionAction(selected, selectedAssignment);
 
   async function load() {
@@ -220,6 +223,18 @@ export default function SubmissionsPage() {
             ) : null}
             <ValidationSummary submission={selected} report={latestReport} />
             <EvidenceChecklist submission={selected} assignment={selectedAssignment} />
+            <div className="assignment-context" style={{ marginTop: '0.85rem' }}>
+              <div className="section-header">
+                <strong>AI Disclosure</strong>
+                <Link href="/prompt-logs">Open prompt logs</Link>
+              </div>
+              {aiDisclosureCheck ? (
+                <p>
+                  <span className={`status ${aiDisclosureCheck.status}`}>{aiDisclosureCheck.status}</span> {aiDisclosureCheck.message}
+                </p>
+              ) : <p className="muted">Run validation to check whether prompt-log evidence is attached.</p>}
+              {aiDisclosureNote ? <p className="muted">{aiDisclosureNote.message}</p> : null}
+            </div>
           </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <h2>Upload Artifacts</h2>

@@ -8,20 +8,21 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, roster setup, instructor analytics, and grading.
+The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, roster setup, instructor analytics, and grading.
 
 ## What This MVP Does
 
 - Seeded login for student, TA, and instructor roles.
 - One ME642 course, three seeded demo lab assignments, and instructor assignment authoring.
 - Student project specification capture.
-- AI prompt-log disclosure with accepted/rejected/manual-edit fields.
+- AI prompt-log disclosure with accepted/rejected/manual-edit fields, course policy guidance, and reusable prompt templates.
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Student reflection cues tied to each assignment.
-- Instructor/TA course setup, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
+- Instructor/TA course setup, responsible-AI policy/template editing, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
+- AI-disclosure quality indicators for missing or thin prompt evidence.
 - CSV gradebook export.
 - Filter-aware gradebook export for instructor queues.
 - Reproducible ZIP package export.

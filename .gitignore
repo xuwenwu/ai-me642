@@ -9,6 +9,7 @@ __pycache__/
 *.db
 backend/data/uploads/
 backend/data/generated/
+backend/data/backups/
 frontend/.next/
 frontend/node_modules/
 frontend/out/

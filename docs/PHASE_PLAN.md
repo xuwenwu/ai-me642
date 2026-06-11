@@ -64,8 +64,24 @@
 - Canvas/LMS handoff CSV export with student, section, assignment, score, status, and feedback fields.
 - Gradebook navigation from instructor overview and review queue.
 
-## Phase VIII: Controlled AI Integration
+## Phase VIII: Deployment, Security, and CI
 
-- Optional provider interface.
-- Full prompt/output logging.
-- Instructor-configured permissions and retention.
+- GitHub Actions CI for backend tests and frontend typecheck/build.
+- Production environment mode and deployment templates.
+- Runtime guardrails that reject unsafe production defaults.
+- Optional demo seeding controlled by environment.
+- Basic backend security headers.
+- Local SQLite/upload backup helper.
+- Deployment and security checklists.
+
+## Phase IX: LMS / Canvas Handoff
+
+- Refined Canvas export formats.
+- Assignment-specific LMS handoff.
+- Roster import/export refinements.
+
+## Phase X: Controlled AI Integration
+
+- Optional live provider interface.
+- Full prompt/output logging for provider calls.
+- Instructor-configured AI permissions, privacy, and retention.

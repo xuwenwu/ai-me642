@@ -17,6 +17,15 @@ def _check(check_type: str, status: str, severity: str, message: str, evidence: 
     }
 
 
+def _note(topic: str, status: str, message: str, evidence: str = "") -> dict:
+    return {
+        "topic": topic,
+        "status": status,
+        "message": message,
+        "evidence": evidence,
+    }
+
+
 def _rows(parsed: dict) -> list[dict[str, float]]:
     rows: list[dict[str, float]] = []
     for section in parsed.get("sections", []):
@@ -59,6 +68,7 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
     file_types = {file.file_type for file in files}
     checks: list[dict] = []
     thermo_series: list[dict] = []
+    interpretation_notes: list[dict] = []
 
     def present(expected: set[str], label: str, required: bool) -> None:
         ok = bool(expected & file_types)
@@ -76,6 +86,15 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
     present({"lammps_log"}, "LAMMPS log", True)
     present({"readme"}, "README/reproducibility notes", False)
     present({"python_analysis", "ovito_script", "figure"}, "Analysis script, OVITO script, or figure", False)
+    if "readme" not in file_types:
+        interpretation_notes.append(
+            _note(
+                "Reproducibility notes",
+                "needs_context",
+                "Add a README or short reproducibility note so another reader can rerun or audit the workflow.",
+                ", ".join(sorted(file_types)) or "no files uploaded",
+            )
+        )
 
     prompt_count = (
         db.query(PromptLogEntry)
@@ -86,6 +105,24 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         .count()
     )
     prompt_uploaded = "prompt_log" in file_types
+    if not prompt_count and not prompt_uploaded:
+        interpretation_notes.append(
+            _note(
+                "AI disclosure",
+                "needs_context",
+                "Prompt evidence is missing; explain any AI assistance or state that no AI assistance was used.",
+                f"database_entries={prompt_count}; uploaded_prompt_log={prompt_uploaded}",
+            )
+        )
+    else:
+        interpretation_notes.append(
+            _note(
+                "AI disclosure",
+                "supported",
+                "Prompt evidence is present, so the interpretation can reference an inspectable AI-use trail.",
+                f"database_entries={prompt_count}; uploaded_prompt_log={prompt_uploaded}",
+            )
+        )
     checks.append(
         _check(
             "ai_disclosure",
@@ -103,6 +140,24 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         series = _thermo_series(file.original_filename, parsed)
         if series:
             thermo_series.append(series)
+        if parsed["errors"]:
+            interpretation_notes.append(
+                _note(
+                    "LAMMPS log health",
+                    "concern",
+                    "The log contains LAMMPS ERROR lines, so simulation results should not be interpreted as a completed valid run until the error is resolved.",
+                    " | ".join(parsed["errors"][:3]),
+                )
+            )
+        else:
+            interpretation_notes.append(
+                _note(
+                    "LAMMPS log health",
+                    "supported",
+                    "No LAMMPS ERROR lines were detected in this log.",
+                    file.original_filename,
+                )
+            )
         checks.append(
             _check(
                 "lammps_log_health",
@@ -113,6 +168,14 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             )
         )
         if parsed["warnings"]:
+            interpretation_notes.append(
+                _note(
+                    "LAMMPS warnings",
+                    "needs_review",
+                    "LAMMPS warning lines were detected; discuss whether they affect the physical interpretation.",
+                    " | ".join(parsed["warnings"][:3]),
+                )
+            )
             checks.append(
                 _check(
                     "lammps_warnings",
@@ -143,6 +206,14 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
 
         rows = _rows(parsed)
         if not rows:
+            interpretation_notes.append(
+                _note(
+                    "Thermo evidence",
+                    "concern",
+                    "No thermo rows were available for plotting or trend interpretation.",
+                    file.original_filename,
+                )
+            )
             continue
         if "Step" in rows[0]:
             steps = [row["Step"] for row in rows if "Step" in row]
@@ -160,6 +231,22 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             temps = [row.get("Temp", math.nan) for row in rows]
             bad = any(math.isnan(temp) or temp < 0 or temp > 10000 for temp in temps)
             drift = abs(temps[-1] - temps[0]) if len(temps) > 1 else 0
+            interpretation_notes.append(
+                _note(
+                    "Temperature trend",
+                    "concern" if bad else ("needs_review" if drift > 1000 else "supported"),
+                    (
+                        "Temperature contains implausible values; inspect the setup before interpreting the run."
+                        if bad
+                        else (
+                            "Temperature changes strongly across the run; explain whether that is expected for this setup."
+                            if drift > 1000
+                            else "Temperature values look plausible in the parsed thermo series."
+                        )
+                    ),
+                    f"start={temps[0]:.3g}, end={temps[-1]:.3g}, drift={drift:.3g}",
+                )
+            )
             checks.append(
                 _check(
                     "temperature_sanity",
@@ -173,6 +260,18 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             initial = rows[0]["TotEng"]
             final = rows[-1]["TotEng"]
             relative = abs(final - initial) / max(abs(initial), 1e-9)
+            interpretation_notes.append(
+                _note(
+                    "Energy conservation",
+                    "needs_review" if relative > 0.05 else "supported",
+                    (
+                        "Total-energy drift is large enough to question timestep stability or setup choices."
+                        if relative > 0.05
+                        else "Total-energy drift is small for this parsed NVE sample, supporting the timestep-stability interpretation."
+                    ),
+                    f"initial={initial:.6g}, final={final:.6g}, relative={relative:.3g}",
+                )
+            )
             checks.append(
                 _check(
                     "energy_drift",
@@ -183,6 +282,15 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
                 )
             )
         if "Press" in rows[0]:
+            pressures = [row["Press"] for row in rows if "Press" in row]
+            interpretation_notes.append(
+                _note(
+                    "Pressure interpretation",
+                    "needs_review",
+                    "Instantaneous pressure can fluctuate strongly; interpret pressure with averaging and physical context rather than a single pass/fail threshold.",
+                    f"min={min(pressures):.3g}, max={max(pressures):.3g}" if pressures else "Press column detected",
+                )
+            )
             checks.append(
                 _check(
                     "pressure_note",
@@ -195,6 +303,14 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         if "Volume" in rows[0]:
             volumes = [row["Volume"] for row in rows if "Volume" in row]
             positive = all(volume > 0 for volume in volumes)
+            interpretation_notes.append(
+                _note(
+                    "Volume sanity",
+                    "supported" if positive else "concern",
+                    "Volumes are positive in the parsed thermo data." if positive else "A non-positive volume appears in the thermo data.",
+                    f"min={min(volumes):.3g}, max={max(volumes):.3g}" if volumes else "",
+                )
+            )
             checks.append(
                 _check(
                     "volume_sanity",
@@ -216,6 +332,7 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         status=status,
         summary=f"Automated validation completed with status: {status}. This is advisory evidence, not a grade.",
         thermo_json=json.dumps(thermo_series),
+        interpretation_json=json.dumps(interpretation_notes),
     )
     report.checks = [ValidationCheck(**check) for check in checks]
     db.add(report)

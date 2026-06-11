@@ -122,6 +122,8 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert any(check["check_type"] == "energy_drift" for check in validation_body["checks"])
             assert validation_body["thermo_series"]
             assert "TotEng" in validation_body["thermo_series"][0]["columns"]
+            assert validation_body["interpretation_notes"]
+            assert any(note["topic"] == "Energy conservation" for note in validation_body["interpretation_notes"])
 
             interpretation = client.patch(
                 f"/api/submissions/{submission_id}/interpretation",
@@ -146,6 +148,7 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             with ZipFile(BytesIO(package.content)) as zf:
                 validation_report = json.loads(zf.read("validation_report.json"))
             assert validation_report["thermo_series"]
+            assert validation_report["interpretation_notes"]
 
             instructor_login = client.post(
                 "/api/auth/login",

@@ -137,6 +137,13 @@ class ThermoSeriesOut(BaseModel):
     points: list[dict[str, float]]
 
 
+class InterpretationNoteOut(BaseModel):
+    topic: str
+    status: str
+    message: str
+    evidence: str = ""
+
+
 class ValidationReportOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -146,6 +153,7 @@ class ValidationReportOut(BaseModel):
     created_at: datetime
     checks: list[ValidationCheckOut] = []
     thermo_series: list[ThermoSeriesOut] = []
+    interpretation_notes: list[InterpretationNoteOut] = []
 
 
 class SubmissionOut(BaseModel):

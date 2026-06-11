@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
 import { ApiError, api, download } from '@/lib/api';
 import type { Assignment, FileArtifact, ProjectSpec, Submission, ValidationReport } from '@/lib/types';
@@ -205,6 +206,7 @@ export default function SubmissionsPage() {
               <>
                 <p><span className={`status ${selected.validation_reports[0].status}`}>{selected.validation_reports[0].status}</span> {selected.validation_reports[0].summary}</p>
                 <ThermoPlots series={selected.validation_reports[0].thermo_series} />
+                <InterpretationNotes notes={selected.validation_reports[0].interpretation_notes} />
                 <table>
                   <thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead>
                   <tbody>

@@ -85,6 +85,9 @@ def test_validation_good_log_has_no_failed_checks():
     assert report.thermo_series[0]["x_field"] == "Step"
     assert "TotEng" in report.thermo_series[0]["columns"]
     assert report.thermo_series[0]["points"]
+    assert report.interpretation_notes
+    assert any(note["topic"] == "Energy conservation" for note in report.interpretation_notes)
+    assert any(note["status"] == "supported" for note in report.interpretation_notes)
 
 
 def test_validation_error_log_fails():
@@ -95,3 +98,4 @@ def test_validation_error_log_fails():
 
     assert report.status == "failed"
     assert any(check.check_type == "lammps_log_health" and check.status == "failed" for check in report.checks)
+    assert any(note["topic"] == "LAMMPS log health" and note["status"] == "concern" for note in report.interpretation_notes)

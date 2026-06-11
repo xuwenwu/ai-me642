@@ -69,12 +69,20 @@ export type ThermoSeries = {
   points: Array<Record<string, number>>;
 };
 
+export type InterpretationNote = {
+  topic: string;
+  status: 'supported' | 'needs_review' | 'needs_context' | 'concern' | string;
+  message: string;
+  evidence: string;
+};
+
 export type ValidationReport = {
   id: number;
   status: string;
   summary: string;
   checks: ValidationCheck[];
   thermo_series: ThermoSeries[];
+  interpretation_notes: InterpretationNote[];
 };
 
 export type Submission = {

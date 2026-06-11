@@ -168,6 +168,7 @@ class ValidationReport(Base):
     status: Mapped[str] = mapped_column(String(32))
     summary: Mapped[str] = mapped_column(Text)
     thermo_json: Mapped[str] = mapped_column(Text, default="[]")
+    interpretation_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     checks = relationship("ValidationCheck", cascade="all, delete-orphan")
@@ -176,6 +177,14 @@ class ValidationReport(Base):
     def thermo_series(self) -> list[dict]:
         try:
             parsed = json.loads(self.thermo_json or "[]")
+        except json.JSONDecodeError:
+            return []
+        return parsed if isinstance(parsed, list) else []
+
+    @property
+    def interpretation_notes(self) -> list[dict]:
+        try:
+            parsed = json.loads(self.interpretation_json or "[]")
         except json.JSONDecodeError:
             return []
         return parsed if isinstance(parsed, list) else []

@@ -236,6 +236,52 @@ th {
   font-size: 11px;
 }
 
+.interpretation-notes {
+  margin: 1rem 0;
+}
+
+.note-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.note-card {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.note-card.supported {
+  border-left-color: var(--good);
+}
+
+.note-card.needs_review,
+.note-card.needs_context {
+  border-left-color: var(--warn);
+}
+
+.note-card.concern {
+  border-left-color: var(--bad);
+}
+
+.note-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.note-heading span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.note-card p {
+  margin: 0.45rem 0 0;
+}
+
 @media (max-width: 700px) {
   .topbar {
     align-items: flex-start;

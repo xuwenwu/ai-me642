@@ -58,9 +58,11 @@
 
 ## Phase VII: Course Operations
 
-- TA assignment workflows.
-- Gradebook dashboards.
-- Canvas or LMS handoff.
+- Instructor/TA gradebook dashboard.
+- Roster-aware gradebook matrix with missing, submitted, graded, validation warning, and average-score summaries.
+- Course CSV export that includes missing students and all assignment cells.
+- Canvas/LMS handoff CSV export with student, section, assignment, score, status, and feedback fields.
+- Gradebook navigation from instructor overview and review queue.
 
 ## Phase VIII: Controlled AI Integration
 

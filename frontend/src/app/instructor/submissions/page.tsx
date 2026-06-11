@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
@@ -109,7 +110,13 @@ export default function InstructorSubmissionsPage() {
 
   return (
     <AppShell>
-      <h1>Instructor Review</h1>
+      <div className="section-header">
+        <h1>Instructor Review</h1>
+        <div className="row">
+          <Link href="/instructor">Instructor overview</Link>
+          <Link href="/instructor/gradebook">Gradebook dashboard</Link>
+        </div>
+      </div>
       {error ? <div className="error">{error}</div> : null}
       {message ? <div className="success">{message}</div> : null}
       <section className="card">

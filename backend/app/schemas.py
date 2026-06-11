@@ -309,6 +309,58 @@ class InstructorAnalyticsOut(BaseModel):
     needs_attention: list[NeedsAttentionOut] = Field(default_factory=list)
 
 
+class GradebookCellOut(BaseModel):
+    assignment_id: int
+    assignment_title: str
+    total_points: float
+    submission_id: int | None = None
+    submission_status: str = "missing"
+    validation_status: str = "missing"
+    grade_state: str = "missing"
+    final_score: float | None = None
+    submitted_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class GradebookStudentOut(BaseModel):
+    student_id: int
+    full_name: str
+    email: str
+    section: str
+    submitted_count: int
+    graded_count: int
+    missing_count: int
+    warning_count: int
+    current_score: float
+    possible_score: float
+    assignments: list[GradebookCellOut] = Field(default_factory=list)
+
+
+class GradebookAssignmentSummaryOut(BaseModel):
+    assignment_id: int
+    title: str
+    due_date: str | None
+    total_points: float
+    submitted_count: int
+    graded_count: int
+    ungraded_count: int
+    missing_count: int
+    warning_count: int
+    failed_count: int
+    average_score: float | None = None
+
+
+class GradebookOut(BaseModel):
+    total_students: int
+    total_assignments: int
+    total_submitted: int
+    total_graded: int
+    total_missing: int
+    current_average_score: float | None = None
+    assignments: list[GradebookAssignmentSummaryOut] = Field(default_factory=list)
+    students: list[GradebookStudentOut] = Field(default_factory=list)
+
+
 class RosterStudentOut(BaseModel):
     student_id: int
     full_name: str

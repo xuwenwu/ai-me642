@@ -17,6 +17,10 @@ from ..schemas import (
     AssignmentOut,
     GradeIn,
     GradeOut,
+    GradebookAssignmentSummaryOut,
+    GradebookCellOut,
+    GradebookOut,
+    GradebookStudentOut,
     InstructorAnalyticsOut,
     NeedsAttentionOut,
     PromptTemplateIn,
@@ -134,6 +138,116 @@ def _filtered_submissions(
                 continue
         filtered.append(submission)
     return filtered
+
+
+def _filtered_assignments(db: Session, assignment_id: int | None) -> list[Assignment]:
+    query = db.query(Assignment).order_by(Assignment.id)
+    if assignment_id:
+        query = query.filter(Assignment.id == assignment_id)
+    return query.all()
+
+
+def _active_student_enrollments(db: Session) -> list[Enrollment]:
+    return (
+        db.query(Enrollment)
+        .join(User)
+        .filter(Enrollment.role == "student", Enrollment.status == "active")
+        .order_by(User.full_name)
+        .all()
+    )
+
+
+def _gradebook_cell(submission: Submission | None, assignment: Assignment) -> GradebookCellOut:
+    if not submission:
+        return GradebookCellOut(
+            assignment_id=assignment.id,
+            assignment_title=assignment.title,
+            total_points=assignment.total_points,
+        )
+    grade = submission.grade
+    return GradebookCellOut(
+        assignment_id=assignment.id,
+        assignment_title=assignment.title,
+        total_points=assignment.total_points,
+        submission_id=submission.id,
+        submission_status=submission.status,
+        validation_status=_latest_validation_status(submission),
+        grade_state="graded" if grade else "ungraded",
+        final_score=grade.final_score if grade else None,
+        submitted_at=submission.submitted_at,
+        updated_at=submission.updated_at,
+    )
+
+
+def _gradebook(db: Session, assignment_id: int | None = None) -> GradebookOut:
+    assignments = _filtered_assignments(db, assignment_id)
+    enrollments = _active_student_enrollments(db)
+    student_ids = [enrollment.user_id for enrollment in enrollments]
+    assignment_ids = [assignment.id for assignment in assignments]
+    submissions = (
+        db.query(Submission)
+        .filter(Submission.user_id.in_(student_ids), Submission.assignment_id.in_(assignment_ids))
+        .all()
+        if student_ids and assignment_ids
+        else []
+    )
+    submission_by_key = {(submission.user_id, submission.assignment_id): submission for submission in submissions}
+    assignment_rows: list[GradebookAssignmentSummaryOut] = []
+    student_rows: list[GradebookStudentOut] = []
+
+    for assignment in assignments:
+        rows = [submission for submission in submissions if submission.assignment_id == assignment.id]
+        graded_scores = [submission.grade.final_score for submission in rows if submission.grade]
+        assignment_rows.append(
+            GradebookAssignmentSummaryOut(
+                assignment_id=assignment.id,
+                title=assignment.title,
+                due_date=assignment.due_date,
+                total_points=assignment.total_points,
+                submitted_count=sum(1 for submission in rows if submission.status == "submitted"),
+                graded_count=len(graded_scores),
+                ungraded_count=sum(1 for submission in rows if submission.status == "submitted" and not submission.grade),
+                missing_count=max(len(enrollments) - len({submission.user_id for submission in rows}), 0),
+                warning_count=sum(1 for submission in rows if _latest_validation_status(submission) == "warning"),
+                failed_count=sum(1 for submission in rows if _latest_validation_status(submission) == "failed"),
+                average_score=(sum(graded_scores) / len(graded_scores)) if graded_scores else None,
+            )
+        )
+
+    for enrollment in enrollments:
+        cells = [_gradebook_cell(submission_by_key.get((enrollment.user_id, assignment.id)), assignment) for assignment in assignments]
+        graded_cells = [cell for cell in cells if cell.final_score is not None]
+        possible_score = sum(cell.total_points for cell in cells if cell.final_score is not None)
+        current_score = sum(cell.final_score or 0 for cell in graded_cells)
+        student_rows.append(
+            GradebookStudentOut(
+                student_id=enrollment.user_id,
+                full_name=enrollment.user.full_name,
+                email=enrollment.user.email,
+                section=enrollment.section.name if enrollment.section else "",
+                submitted_count=sum(1 for cell in cells if cell.submission_status == "submitted"),
+                graded_count=len(graded_cells),
+                missing_count=sum(1 for cell in cells if cell.submission_status == "missing"),
+                warning_count=sum(1 for cell in cells if cell.validation_status == "warning"),
+                current_score=current_score,
+                possible_score=possible_score,
+                assignments=cells,
+            )
+        )
+
+    total_graded = sum(row.graded_count for row in assignment_rows)
+    graded_total = sum(cell.final_score or 0 for row in student_rows for cell in row.assignments if cell.final_score is not None)
+    possible_total = sum(cell.total_points for row in student_rows for cell in row.assignments if cell.final_score is not None)
+    return GradebookOut(
+        total_students=len(enrollments),
+        total_assignments=len(assignments),
+        total_submitted=sum(row.submitted_count for row in assignment_rows),
+        total_graded=total_graded,
+        total_missing=sum(row.missing_count for row in assignment_rows),
+        current_average_score=(graded_total / possible_total * 100) if possible_total else None,
+        assignments=assignment_rows,
+        students=student_rows,
+    )
 
 
 def _default_course(db: Session) -> Course:
@@ -608,6 +722,102 @@ def save_grade(
     db.commit()
     db.refresh(grade)
     return grade
+
+
+@router.get("/gradebook", response_model=GradebookOut)
+def gradebook(
+    assignment_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> GradebookOut:
+    return _gradebook(db, assignment_id)
+
+
+@router.get("/course-gradebook.csv")
+def course_gradebook_csv(
+    assignment_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> Response:
+    gradebook_data = _gradebook(db, assignment_id)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    headers = ["student_id", "student_name", "student_email", "section", "submitted_count", "graded_count", "missing_count", "current_score", "possible_score"]
+    for assignment in gradebook_data.assignments:
+        headers.extend([f"{assignment.title} status", f"{assignment.title} validation", f"{assignment.title} score"])
+    writer.writerow(headers)
+    for student in gradebook_data.students:
+        row: list[object] = [
+            student.student_id,
+            student.full_name,
+            student.email,
+            student.section,
+            student.submitted_count,
+            student.graded_count,
+            student.missing_count,
+            student.current_score,
+            student.possible_score,
+        ]
+        for cell in student.assignments:
+            row.extend([cell.submission_status, cell.validation_status, cell.final_score if cell.final_score is not None else ""])
+        writer.writerow(row)
+    return Response(
+        buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="course_gradebook.csv"'},
+    )
+
+
+@router.get("/canvas-gradebook.csv")
+def canvas_gradebook_csv(
+    assignment_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> Response:
+    gradebook_data = _gradebook(db, assignment_id)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "Student",
+            "ID",
+            "SIS User ID",
+            "Section",
+            "Assignment",
+            "Points Possible",
+            "Score",
+            "Submission Status",
+            "Validation Status",
+            "Submitted At",
+            "Feedback",
+        ]
+    )
+    for student in gradebook_data.students:
+        for cell in student.assignments:
+            feedback = ""
+            if cell.submission_id:
+                submission = db.get(Submission, cell.submission_id)
+                feedback = submission.grade.feedback if submission and submission.grade else ""
+            writer.writerow(
+                [
+                    student.full_name,
+                    student.email,
+                    student.email,
+                    student.section,
+                    cell.assignment_title,
+                    cell.total_points,
+                    cell.final_score if cell.final_score is not None else "",
+                    cell.submission_status,
+                    cell.validation_status,
+                    cell.submitted_at.isoformat() if cell.submitted_at else "",
+                    feedback,
+                ]
+            )
+    return Response(
+        buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="canvas_gradebook.csv"'},
+    )
 
 
 @router.get("/gradebook.csv")

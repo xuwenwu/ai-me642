@@ -214,6 +214,58 @@ export type InstructorAnalytics = {
   needs_attention: NeedsAttention[];
 };
 
+export type GradebookCell = {
+  assignment_id: number;
+  assignment_title: string;
+  total_points: number;
+  submission_id: number | null;
+  submission_status: string;
+  validation_status: string;
+  grade_state: string;
+  final_score: number | null;
+  submitted_at: string | null;
+  updated_at: string | null;
+};
+
+export type GradebookStudent = {
+  student_id: number;
+  full_name: string;
+  email: string;
+  section: string;
+  submitted_count: number;
+  graded_count: number;
+  missing_count: number;
+  warning_count: number;
+  current_score: number;
+  possible_score: number;
+  assignments: GradebookCell[];
+};
+
+export type GradebookAssignmentSummary = {
+  assignment_id: number;
+  title: string;
+  due_date: string | null;
+  total_points: number;
+  submitted_count: number;
+  graded_count: number;
+  ungraded_count: number;
+  missing_count: number;
+  warning_count: number;
+  failed_count: number;
+  average_score: number | null;
+};
+
+export type Gradebook = {
+  total_students: number;
+  total_assignments: number;
+  total_submitted: number;
+  total_graded: number;
+  total_missing: number;
+  current_average_score: number | null;
+  assignments: GradebookAssignmentSummary[];
+  students: GradebookStudent[];
+};
+
 export type RosterStudent = {
   student_id: number;
   full_name: string;

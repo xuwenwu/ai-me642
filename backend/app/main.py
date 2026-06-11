@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .config import get_settings
 from .database import SessionLocal, init_db
 from .routers import assignments, auth, instructor, projects, prompt_logs, submissions, validation
 from .services.seed_data import seed
@@ -19,10 +20,11 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="AI-ME642 Responsible Scientific Computing Studio", lifespan=lifespan)
+settings = get_settings()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

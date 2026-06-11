@@ -102,6 +102,7 @@ Expected:
 - Latest validation is `warning`.
 - Required LAMMPS input and log checks pass.
 - Log health, thermo data, run completion, step monotonicity, temperature sanity, energy drift, and volume checks pass.
+- Thermo plots appear for available columns such as temperature, total energy, pressure, and volume.
 - Optional README or analysis-artifact checks may warn.
 - Pressure is marked for review.
 

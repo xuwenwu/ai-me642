@@ -19,6 +19,7 @@ The Phase I-plus rebuild focuses on one complete assignment workflow: **Lab 3: N
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
 - Conservative validation checks for completeness, log health, temperature, energy drift, pressure, volume, and step monotonicity.
+- Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Instructor/TA submission review and rubric grading.
 - CSV gradebook export.
 - Reproducible ZIP package export.
@@ -67,6 +68,45 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
 The frontend serves `http://127.0.0.1:3000`.
 
 Using `127.0.0.1` for both services avoids local IPv4/IPv6 `localhost` resolution mismatches during development.
+
+## Phone Or LAN Testing
+
+If your phone and workstation are on the same network, start the servers on all network interfaces and replace `<WORKSTATION_IP>` with the workstation IPv4 address:
+
+```powershell
+cd backend
+$env:CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,http://<WORKSTATION_IP>:3000"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+```powershell
+cd frontend
+$env:NEXT_PUBLIC_API_URL="http://<WORKSTATION_IP>:8000/api"
+npm run dev -- --hostname 0.0.0.0 --port 3000
+```
+
+Then open `http://<WORKSTATION_IP>:3000/login` on your phone. If the page does not load, check that the phone is on the same network and that Windows Firewall allows Python/Node on ports `8000` and `3000`.
+
+If your phone is not on the same network, use a temporary tunnel to the frontend. The frontend proxies `/api` to the local backend, so only one public URL is needed:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+```powershell
+cd frontend
+$env:BACKEND_PROXY_URL="http://127.0.0.1:8000"
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+In another frontend terminal:
+
+```powershell
+npx --yes localtunnel --port 3000
+```
+
+Open the printed `https://...loca.lt` URL on your phone.
 
 ## Tests
 

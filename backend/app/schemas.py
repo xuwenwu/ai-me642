@@ -130,6 +130,13 @@ class ValidationCheckOut(BaseModel):
     created_at: datetime
 
 
+class ThermoSeriesOut(BaseModel):
+    source: str
+    x_field: str
+    columns: list[str]
+    points: list[dict[str, float]]
+
+
 class ValidationReportOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -138,6 +145,7 @@ class ValidationReportOut(BaseModel):
     summary: str
     created_at: datetime
     checks: list[ValidationCheckOut] = []
+    thermo_series: list[ThermoSeriesOut] = []
 
 
 class SubmissionOut(BaseModel):
@@ -188,4 +196,3 @@ class GradeOut(BaseModel):
     feedback: str
     graded_at: datetime
     criterion_scores: list[CriterionScoreOut] = []
-

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import UTC, datetime
+import json
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
@@ -166,9 +167,18 @@ class ValidationReport(Base):
     submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"))
     status: Mapped[str] = mapped_column(String(32))
     summary: Mapped[str] = mapped_column(Text)
+    thermo_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     checks = relationship("ValidationCheck", cascade="all, delete-orphan")
+
+    @property
+    def thermo_series(self) -> list[dict]:
+        try:
+            parsed = json.loads(self.thermo_json or "[]")
+        except json.JSONDecodeError:
+            return []
+        return parsed if isinstance(parsed, list) else []
 
 
 class ValidationCheck(Base):

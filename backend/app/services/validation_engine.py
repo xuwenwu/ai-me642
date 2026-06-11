@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import math
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -23,10 +24,41 @@ def _rows(parsed: dict) -> list[dict[str, float]]:
     return rows
 
 
+def _sample_rows(rows: list[dict[str, float]], limit: int = 500) -> list[dict[str, float]]:
+    if len(rows) <= limit:
+        return rows
+    stride = max(math.ceil(len(rows) / limit), 1)
+    sampled = rows[::stride]
+    return sampled[:limit]
+
+
+def _thermo_series(source: str, parsed: dict) -> dict | None:
+    rows = _rows(parsed)
+    if not rows:
+        return None
+
+    plottable = ["Step", "Temp", "TotEng", "Press", "Volume"]
+    columns = [column for column in plottable if column in rows[0]]
+    if "Step" not in columns or len(columns) < 2:
+        return None
+
+    points = [
+        {column: float(row[column]) for column in columns if column in row}
+        for row in _sample_rows(rows)
+    ]
+    return {
+        "source": source,
+        "x_field": "Step",
+        "columns": columns,
+        "points": points,
+    }
+
+
 def validate_submission(db: Session, submission: Submission) -> ValidationReport:
     files: list[FileArtifact] = list(submission.files)
     file_types = {file.file_type for file in files}
     checks: list[dict] = []
+    thermo_series: list[dict] = []
 
     def present(expected: set[str], label: str, required: bool) -> None:
         ok = bool(expected & file_types)
@@ -68,6 +100,9 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         if file.file_type != "lammps_log":
             continue
         parsed = parse_lammps_log(Path(file.file_path))
+        series = _thermo_series(file.original_filename, parsed)
+        if series:
+            thermo_series.append(series)
         checks.append(
             _check(
                 "lammps_log_health",
@@ -180,10 +215,10 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         submission_id=submission.id,
         status=status,
         summary=f"Automated validation completed with status: {status}. This is advisory evidence, not a grade.",
+        thermo_json=json.dumps(thermo_series),
     )
     report.checks = [ValidationCheck(**check) for check in checks]
     db.add(report)
     db.commit()
     db.refresh(report)
     return report
-

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { ThermoPlots } from '@/components/ThermoPlots';
 import { api, download } from '@/lib/api';
 import type { Assignment, Submission } from '@/lib/types';
 
@@ -76,6 +77,7 @@ export default function InstructorSubmissionsPage() {
             <p><strong>{selected.title}</strong></p>
             <p>Status: {selected.status}</p>
             <p>Validation: {selected.validation_reports[0]?.status || 'not run'}</p>
+            {selected.validation_reports[0] ? <ThermoPlots series={selected.validation_reports[0].thermo_series} /> : null}
             <h3>Files</h3>
             {selected.files.map((file) => <p key={file.id}>{file.file_type}: {file.original_filename}</p>)}
             <h3>Student Interpretation</h3>
@@ -100,4 +102,3 @@ export default function InstructorSubmissionsPage() {
     </AppShell>
   );
 }
-

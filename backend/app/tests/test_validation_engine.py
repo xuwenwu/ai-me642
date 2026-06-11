@@ -81,6 +81,10 @@ def test_validation_good_log_has_no_failed_checks():
     assert report.status == "warning"
     assert not [check for check in report.checks if check.status == "failed"]
     assert any(check.check_type == "energy_drift" for check in report.checks)
+    assert report.thermo_series
+    assert report.thermo_series[0]["x_field"] == "Step"
+    assert "TotEng" in report.thermo_series[0]["columns"]
+    assert report.thermo_series[0]["points"]
 
 
 def test_validation_error_log_fails():
@@ -91,4 +95,3 @@ def test_validation_error_log_fails():
 
     assert report.status == "failed"
     assert any(check.check_type == "lammps_log_health" and check.status == "failed" for check in report.checks)
-

@@ -1,4 +1,7 @@
 from pathlib import Path
+from zipfile import ZipFile
+from io import BytesIO
+import json
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -117,6 +120,8 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert validation_body["status"] == "warning"
             assert not [check for check in validation_body["checks"] if check["status"] == "failed"]
             assert any(check["check_type"] == "energy_drift" for check in validation_body["checks"])
+            assert validation_body["thermo_series"]
+            assert "TotEng" in validation_body["thermo_series"][0]["columns"]
 
             interpretation = client.patch(
                 f"/api/submissions/{submission_id}/interpretation",
@@ -138,6 +143,9 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert package.headers["content-type"] == "application/zip"
             assert b"README.md" in package.content
             assert b"validation_report.json" in package.content
+            with ZipFile(BytesIO(package.content)) as zf:
+                validation_report = json.loads(zf.read("validation_report.json"))
+            assert validation_report["thermo_series"]
 
             instructor_login = client.post(
                 "/api/auth/login",

@@ -62,11 +62,19 @@ export type ValidationCheck = {
   evidence: string;
 };
 
+export type ThermoSeries = {
+  source: string;
+  x_field: string;
+  columns: string[];
+  points: Array<Record<string, number>>;
+};
+
 export type ValidationReport = {
   id: number;
   status: string;
   summary: string;
   checks: ValidationCheck[];
+  thermo_series: ThermoSeries[];
 };
 
 export type Submission = {
@@ -80,4 +88,3 @@ export type Submission = {
   files: FileArtifact[];
   validation_reports: ValidationReport[];
 };
-

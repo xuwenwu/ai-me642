@@ -126,6 +126,14 @@ textarea {
   gap: 0.75rem;
 }
 
+.section-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
 .form {
   display: grid;
   gap: 0.85rem;
@@ -173,6 +181,64 @@ textarea {
 table {
   border-collapse: collapse;
   width: 100%;
+}
+
+.summary-strip {
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  margin: 0.75rem 0;
+}
+
+.summary-item {
+  padding: 0.65rem 0.75rem;
+}
+
+.summary-item span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.8rem;
+}
+
+.summary-item strong {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.evidence-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.evidence-pill.present {
+  background: #e5f3ea;
+  color: var(--good);
+}
+
+.evidence-pill.missing {
+  background: #f6f2e7;
+  color: var(--muted);
+}
+
+.details-panel {
+  margin-top: 0.85rem;
+}
+
+.details-panel summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
 }
 
 td,

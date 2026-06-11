@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
+import { EvidenceChecklist, ValidationSummary } from '@/components/ValidationSummary';
 import { api, download } from '@/lib/api';
 import type { Assignment, Submission } from '@/lib/types';
 
@@ -20,6 +21,7 @@ export default function InstructorSubmissionsPage() {
 
   const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
   const assignment = useMemo(() => assignments.find((item) => item.id === selected?.assignment_id), [assignments, selected]);
+  const latestReport = selected?.validation_reports[0];
 
   async function load() {
     const [a, s] = await Promise.all([api<Assignment[]>('/assignments'), api<Submission[]>('/instructor/submissions')]);
@@ -74,12 +76,16 @@ export default function InstructorSubmissionsPage() {
       {selected ? (
         <div className="grid two" style={{ marginTop: '1rem' }}>
           <section className="card">
-            <h2>Submission Evidence</h2>
+            <div className="section-header">
+              <h2>Submission Evidence</h2>
+              <span className={`status ${latestReport?.status ?? ''}`}>{latestReport?.status ?? 'not run'}</span>
+            </div>
             <p><strong>{selected.title}</strong></p>
             <p>Status: {selected.status}</p>
-            <p>Validation: {selected.validation_reports[0]?.status || 'not run'}</p>
-            {selected.validation_reports[0] ? <ThermoPlots series={selected.validation_reports[0].thermo_series} /> : null}
-            {selected.validation_reports[0] ? <InterpretationNotes notes={selected.validation_reports[0].interpretation_notes} /> : null}
+            <ValidationSummary submission={selected} report={latestReport} />
+            <EvidenceChecklist submission={selected} />
+            {latestReport ? <ThermoPlots series={latestReport.thermo_series} /> : null}
+            {latestReport ? <InterpretationNotes notes={latestReport.interpretation_notes} /> : null}
             <h3>Files</h3>
             {selected.files.map((file) => <p key={file.id}>{file.file_type}: {file.original_filename}</p>)}
             <h3>Student Interpretation</h3>

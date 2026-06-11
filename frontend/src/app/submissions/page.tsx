@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
+import { EvidenceChecklist, ValidationSummary, nextSubmissionAction } from '@/components/ValidationSummary';
 import { ApiError, api, download } from '@/lib/api';
 import type { Assignment, FileArtifact, ProjectSpec, Submission, ValidationReport } from '@/lib/types';
 
@@ -32,6 +33,8 @@ export default function SubmissionsPage() {
   const [interpretation, setInterpretation] = useState('');
 
   const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
+  const latestReport = selected?.validation_reports[0];
+  const nextAction = nextSubmissionAction(selected);
 
   async function load() {
     const [a, p, s] = await Promise.all([api<Assignment[]>('/assignments'), api<ProjectSpec[]>('/projects'), api<Submission[]>('/submissions')]);
@@ -175,14 +178,22 @@ export default function SubmissionsPage() {
           {selected ? (
             <div>
               <p>Status: <strong>{selected.status}</strong></p>
-              <p>Files: {selected.files.length}</p>
-              <p>Latest validation: {selected.validation_reports[0]?.status || 'not run'}</p>
+              <p>Next: <strong>{nextAction}</strong></p>
+              <p>Latest validation: {latestReport?.status || 'not run'}</p>
             </div>
           ) : <p className="muted">Create a submission to begin.</p>}
         </section>
       </div>
       {selected ? (
         <>
+          <section className="card" style={{ marginTop: '1rem' }}>
+            <div className="section-header">
+              <h2>Evidence Status</h2>
+              <span className="status warning">{nextAction}</span>
+            </div>
+            <ValidationSummary submission={selected} report={latestReport} />
+            <EvidenceChecklist submission={selected} />
+          </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <h2>Upload Artifacts</h2>
             <form className="form" onSubmit={uploadArtifact}>
@@ -192,34 +203,41 @@ export default function SubmissionsPage() {
               <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               <button disabled={!file}>Upload</button>
             </form>
-            <table>
-              <thead><tr><th>Type</th><th>Name</th><th>Size</th></tr></thead>
-              <tbody>{selected.files.map((artifact) => <tr key={artifact.id}><td>{artifact.file_type}</td><td>{artifact.original_filename}</td><td>{artifact.size_bytes}</td></tr>)}</tbody>
-            </table>
+            <details className="details-panel" open={selected.files.length > 0}>
+              <summary>Uploaded files ({selected.files.length})</summary>
+              <table>
+                <thead><tr><th>Type</th><th>Name</th><th>Size</th></tr></thead>
+                <tbody>{selected.files.map((artifact) => <tr key={artifact.id}><td>{artifact.file_type}</td><td>{artifact.original_filename}</td><td>{artifact.size_bytes}</td></tr>)}</tbody>
+              </table>
+            </details>
           </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <div className="row">
               <h2>Validation</h2>
               <button onClick={runValidation}>Run validation</button>
             </div>
-            {selected.validation_reports[0] ? (
+            {latestReport ? (
               <>
-                <p><span className={`status ${selected.validation_reports[0].status}`}>{selected.validation_reports[0].status}</span> {selected.validation_reports[0].summary}</p>
-                <ThermoPlots series={selected.validation_reports[0].thermo_series} />
-                <InterpretationNotes notes={selected.validation_reports[0].interpretation_notes} />
-                <table>
-                  <thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead>
-                  <tbody>
-                    {selected.validation_reports[0].checks.map((check) => (
-                      <tr key={check.id}>
-                        <td>{check.check_type}</td>
-                        <td><span className={`status ${check.status}`}>{check.status}</span></td>
-                        <td>{check.message}</td>
-                        <td>{check.evidence}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <p><span className={`status ${latestReport.status}`}>{latestReport.status}</span> {latestReport.summary}</p>
+                <ValidationSummary submission={selected} report={latestReport} />
+                <ThermoPlots series={latestReport.thermo_series} />
+                <InterpretationNotes notes={latestReport.interpretation_notes} />
+                <details className="details-panel">
+                  <summary>Detailed validation checks ({latestReport.checks.length})</summary>
+                  <table>
+                    <thead><tr><th>Check</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead>
+                    <tbody>
+                      {latestReport.checks.map((check) => (
+                        <tr key={check.id}>
+                          <td>{check.check_type}</td>
+                          <td><span className={`status ${check.status}`}>{check.status}</span></td>
+                          <td>{check.message}</td>
+                          <td>{check.evidence}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
               </>
             ) : <p className="muted">No validation report yet.</p>}
           </section>

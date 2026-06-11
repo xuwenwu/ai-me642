@@ -36,7 +36,10 @@ Use this checklist when reviewing the app for a small real-class pilot.
 12. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
 13. Enter rubric scores and save a grade.
 14. Confirm the grade-save message appears beside the rubric form.
-15. Download `gradebook.csv` and confirm the submission row includes validation, section, and grade values.
+15. Open Gradebook Dashboard.
+16. Confirm course totals, assignment operations, and student gradebook rows appear.
+17. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
+18. Download `canvas_gradebook.csv` and confirm it includes student, section, assignment, score, status, and feedback fields.
 
 ## Backend Checks
 
@@ -61,4 +64,5 @@ npm run build
 - No live LLM calls are made.
 - AI-disclosure analytics flag missing or thin evidence but do not score students automatically.
 - Phase VI validation statically inspects uploaded scripts; it does not execute LAMMPS, Python, OVITO, or Slurm.
-- Canvas, TA assignment, and live deployment hardening remain future work.
+- Canvas export is a CSV handoff, not a live Canvas API integration.
+- Live deployment hardening remains future work.

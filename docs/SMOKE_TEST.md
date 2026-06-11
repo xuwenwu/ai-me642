@@ -164,6 +164,19 @@ Expected:
 
 - The CSV contains the submitted row with validation status and final score.
 
+Review course operations:
+
+- Open Gradebook Dashboard from Instructor Overview.
+- Confirm totals, assignment operations, and student rows appear.
+- Download the course CSV.
+- Download the Canvas CSV.
+
+Expected:
+
+- The gradebook dashboard includes missing/submitted/graded counts.
+- The course CSV includes one row per student with assignment status and score columns.
+- The Canvas CSV includes Student, SIS User ID, Section, Assignment, Points Possible, Score, Submission Status, Validation Status, Submitted At, and Feedback columns.
+
 ## Notes
 
 - Automated validation is advisory evidence, not the final course grade.

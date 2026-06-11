@@ -8,7 +8,7 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, roster setup, instructor analytics, and grading.
+The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, roster setup, instructor analytics, grading, and gradebook exports.
 
 ## What This MVP Does
 
@@ -25,8 +25,8 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - Student reflection cues tied to each assignment.
 - Instructor/TA course setup, responsible-AI policy/template editing, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
 - AI-disclosure quality indicators for missing or thin prompt evidence.
-- CSV gradebook export.
-- Filter-aware gradebook export for instructor queues.
+- Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
+- CSV gradebook export, filter-aware queue export, and Canvas/LMS-style CSV handoff.
 - Reproducible ZIP package export.
 
 ## What This MVP Does Not Do
@@ -35,7 +35,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - It does not run uploaded LAMMPS, Python, or shell code.
 - It does not execute uploaded OVITO scripts or Slurm jobs.
 - It does not submit HPC jobs.
-- It does not integrate with Canvas yet.
+- It does not integrate with the live Canvas API yet.
 - It does not treat automated validation as a grade.
 
 ## Seed Accounts

@@ -32,6 +32,7 @@ export default function InstructorOverviewPage() {
         <h1>Instructor Overview</h1>
         <div className="row">
           <button className="secondary" onClick={() => download('/instructor/gradebook.csv', 'gradebook.csv')}>Download gradebook</button>
+          <Link href="/instructor/gradebook">Gradebook dashboard</Link>
           <Link href="/instructor/setup">Course setup</Link>
           <Link href="/instructor/submissions">Open review queue</Link>
         </div>

@@ -306,6 +306,16 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert graded_lab3_summary["graded_count"] == 1
             assert graded_lab3_summary["ungraded_submitted_count"] == 0
 
+            gradebook_json = client.get("/api/instructor/gradebook", headers=instructor_headers)
+            assert gradebook_json.status_code == 200
+            gradebook_body = gradebook_json.json()
+            assert gradebook_body["total_students"] >= 2
+            assert gradebook_body["total_graded"] >= 1
+            student_row = next(item for item in gradebook_body["students"] if item["email"] == "student@example.edu")
+            lab3_cell = next(item for item in student_row["assignments"] if item["assignment_id"] == assignment_id)
+            assert lab3_cell["final_score"] == 100
+            assert lab3_cell["validation_status"] == "warning"
+
             gradebook = client.get(
                 f"/api/instructor/gradebook.csv?assignment_id={assignment_id}&grade_state=graded",
                 headers=instructor_headers,
@@ -314,6 +324,16 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert "student@example.edu" in gradebook.text
             assert "Pilot Section A" in gradebook.text
             assert "100.0" in gradebook.text
+
+            course_gradebook = client.get("/api/instructor/course-gradebook.csv", headers=instructor_headers)
+            assert course_gradebook.status_code == 200
+            assert "current_score" in course_gradebook.text
+            assert "student@example.edu" in course_gradebook.text
+
+            canvas_gradebook = client.get("/api/instructor/canvas-gradebook.csv", headers=instructor_headers)
+            assert canvas_gradebook.status_code == 200
+            assert "SIS User ID" in canvas_gradebook.text
+            assert "Lab 3: NVE Energy Conservation and Timestep Stability" in canvas_gradebook.text
     finally:
         app.dependency_overrides.pop(get_db, None)
         settings.upload_root = original_upload_root

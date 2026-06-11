@@ -1,0 +1,6 @@
+LAMMPS (illustrative error sample)
+Step Temp PotEng KinEng TotEng Press Volume
+0 300.0 -1000.0 50.0 -950.0 1.2 4000.0
+100 350.0 -900.0 60.0 -840.0 10.0 4000.0
+ERROR: Lost atoms: original 4000 current 3992
+

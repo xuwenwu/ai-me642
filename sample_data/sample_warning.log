@@ -1,0 +1,8 @@
+LAMMPS (illustrative warning sample)
+WARNING: Communication cutoff is shorter than a bond length based estimate
+Step Temp PotEng KinEng TotEng Press Volume
+0 300.0 -1000.0 50.0 -950.0 1.2 4000.0
+100 305.0 -998.0 48.0 -950.0 3.0 4000.0
+200 310.0 -996.0 45.0 -951.0 5.0 4000.0
+Loop time of 0.3 on 1 procs for 200 steps with 4000 atoms
+

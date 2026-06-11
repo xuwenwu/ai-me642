@@ -1,0 +1,13 @@
+# Minimal illustrative LAMMPS input for AI-ME642 Lab 3 validation tests.
+units metal
+atom_style atomic
+boundary p p p
+read_data sample_structure.data
+pair_style eam
+pair_coeff * * example.eam.alloy Al
+timestep 0.001
+thermo 100
+thermo_style custom step temp pe ke etotal press vol
+fix 1 all nve
+run 500
+

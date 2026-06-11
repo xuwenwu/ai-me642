@@ -19,6 +19,8 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
+- Static LAMMPS input linting plus Slurm, Python analysis, and OVITO artifact checks without executing uploaded code.
+- Multi-log comparison when a submission includes more than one LAMMPS log.
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Student reflection cues tied to each assignment.
 - Instructor/TA course setup, responsible-AI policy/template editing, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
@@ -31,6 +33,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 
 - It does not call a live LLM.
 - It does not run uploaded LAMMPS, Python, or shell code.
+- It does not execute uploaded OVITO scripts or Slurm jobs.
 - It does not submit HPC jobs.
 - It does not integrate with Canvas yet.
 - It does not treat automated validation as a grade.

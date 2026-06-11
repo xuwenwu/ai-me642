@@ -115,7 +115,7 @@ class Assignment(Base):
     status: Mapped[str] = mapped_column(String(32), default="published")
     validation_profile: Mapped[str] = mapped_column(String(64), default="lammps_basic_health")
     required_file_types_json: Mapped[str] = mapped_column(Text, default='["lammps_input", "lammps_log"]')
-    optional_file_types_json: Mapped[str] = mapped_column(Text, default='["readme", "prompt_log", "python_analysis", "ovito_script", "figure"]')
+    optional_file_types_json: Mapped[str] = mapped_column(Text, default='["readme", "prompt_log", "python_analysis", "ovito_script", "slurm_script", "figure"]')
     validation_settings_json: Mapped[str] = mapped_column(Text, default="{}")
     interpretation_prompts_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
@@ -129,7 +129,7 @@ class Assignment(Base):
 
     @property
     def optional_file_types(self) -> list[str]:
-        return _json_list(self.optional_file_types_json, ["readme", "prompt_log", "python_analysis", "ovito_script", "figure"])
+        return _json_list(self.optional_file_types_json, ["readme", "prompt_log", "python_analysis", "ovito_script", "slurm_script", "figure"])
 
     @property
     def validation_settings(self) -> dict:

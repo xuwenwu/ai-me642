@@ -7,7 +7,7 @@ import { fileTypeLabels } from '@/components/ValidationSummary';
 import { api } from '@/lib/api';
 import type { AIPolicy, AIPolicyInput, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
 
-const fileTypes = ['lammps_input', 'lammps_log', 'readme', 'prompt_log', 'python_analysis', 'ovito_script', 'figure', 'data', 'other'];
+const fileTypes = ['lammps_input', 'lammps_log', 'readme', 'prompt_log', 'python_analysis', 'ovito_script', 'slurm_script', 'figure', 'data', 'other'];
 const validationProfiles = ['lammps_basic_health', 'nvt_temperature_control', 'nve_energy_conservation'];
 
 const emptyAssignment: AssignmentManageInput = {

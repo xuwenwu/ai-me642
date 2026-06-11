@@ -7,13 +7,14 @@ export const fileTypeLabels: Record<string, string> = {
   prompt_log: 'Prompt upload',
   python_analysis: 'Analysis script',
   ovito_script: 'OVITO script',
+  slurm_script: 'Slurm script',
   figure: 'Figure',
   data: 'Data file',
   other: 'Other',
 };
 
 const defaultRequiredFiles = ['lammps_input', 'lammps_log'];
-const defaultOptionalEvidence = ['readme', 'python_analysis', 'ovito_script', 'figure', 'prompt_log'];
+const defaultOptionalEvidence = ['readme', 'python_analysis', 'ovito_script', 'slurm_script', 'figure', 'prompt_log'];
 
 function evidenceItems(assignment: Assignment | undefined) {
   const required = assignment?.required_file_types?.length ? assignment.required_file_types : defaultRequiredFiles;

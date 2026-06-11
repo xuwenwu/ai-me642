@@ -88,10 +88,14 @@ Upload sample artifacts:
 
 - Upload `sample_data/sample_input.in` as `lammps_input`.
 - Upload `sample_data/sample_good_nve.log` as `lammps_log`.
+- Upload `sample_data/sample_slurm.sbatch` as `slurm_script`.
+- Upload `sample_data/sample_analysis.py` as `python_analysis`.
+- Upload `sample_data/sample_ovito.py` as `ovito_script`.
+- Optional: upload `sample_data/sample_warning.log` as a second `lammps_log` to review multi-log comparison.
 
 Expected:
 
-- The file table lists both sample files.
+- The file table lists the uploaded sample files.
 
 Run validation:
 
@@ -101,7 +105,9 @@ Expected:
 
 - Latest validation is `warning`.
 - Required LAMMPS input and log checks pass.
-- Log health, thermo data, run completion, step monotonicity, temperature sanity, energy drift, and volume checks pass.
+- Log health, LAMMPS input lint, thermo data, run completion, step monotonicity, temperature sanity, energy drift, and volume checks pass.
+- Slurm, Python analysis, and OVITO script static checks appear when those artifacts are uploaded.
+- Multi-log comparison appears when two or more LAMMPS logs are uploaded.
 - Thermo plots appear for available columns such as temperature, total energy, pressure, and volume.
 - Optional README or analysis-artifact checks may warn.
 - Pressure is marked for review.
@@ -123,6 +129,9 @@ Expected:
   - `validation_report.json`
   - `artifacts/lammps_input/sample_input.in`
   - `artifacts/lammps_log/sample_good_nve.log`
+  - `artifacts/slurm_script/sample_slurm.sbatch`
+  - `artifacts/python_analysis/sample_analysis.py`
+  - `artifacts/ovito_script/sample_ovito.py`
 
 ## Instructor Workflow
 

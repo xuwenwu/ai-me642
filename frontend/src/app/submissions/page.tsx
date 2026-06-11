@@ -16,6 +16,7 @@ const fileTypes = [
   'prompt_log',
   'python_analysis',
   'ovito_script',
+  'slurm_script',
   'figure',
   'data',
   'other',

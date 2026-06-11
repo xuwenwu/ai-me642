@@ -14,9 +14,11 @@ Use this checklist when reviewing the app for a small real-class pilot.
 5. Confirm each selected lab shows its validation profile, required evidence, optional evidence, and reflection cues.
 6. Open AI Prompt Logs and confirm the course AI policy, allowed tools, disclosure checklist, and prompt templates appear.
 7. Choose a template, save a prompt log connected to Lab 3, and confirm it appears in Recorded Logs.
-8. Upload `sample_input.in` and `sample_good_nve.log` from `sample_data` for Lab 3.
-9. Run validation and confirm thermo plots, interpretation notes, validation checks, and the AI Disclosure cue appear.
-10. Save a student interpretation and submit the package.
+8. Upload `sample_input.in`, `sample_good_nve.log`, `sample_slurm.sbatch`, `sample_analysis.py`, and `sample_ovito.py` from `sample_data` for Lab 3.
+9. Optionally upload `sample_warning.log` as a second `lammps_log` to review multi-log comparison.
+10. Run validation and confirm thermo plots, interpretation notes, validation checks, and the AI Disclosure cue appear.
+11. Confirm Phase VI checks appear for LAMMPS input structure, Slurm directives/resources/launch safety, Python analysis structure/safety, OVITO script structure/safety, and multi-log comparison when two logs are present.
+12. Save a student interpretation and submit the package.
 
 ## Instructor Flow
 
@@ -58,4 +60,5 @@ npm run build
 - Automated validation is advisory evidence, not a grade.
 - No live LLM calls are made.
 - AI-disclosure analytics flag missing or thin evidence but do not score students automatically.
-- Canvas, TA assignment, and richer scientific validation remain future work.
+- Phase VI validation statically inspects uploaded scripts; it does not execute LAMMPS, Python, OVITO, or Slurm.
+- Canvas, TA assignment, and live deployment hardening remain future work.

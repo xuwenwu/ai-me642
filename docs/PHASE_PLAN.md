@@ -52,7 +52,9 @@
 
 - Slurm script linting without execution.
 - OVITO/Python artifact metadata checks.
-- Richer multi-run comparison for timestep and thermostat studies.
+- Static LAMMPS input linting for setup, force-field, thermo, run, and ensemble cues.
+- Richer multi-run comparison when multiple LAMMPS logs are uploaded.
+- Sample Slurm, Python, and OVITO artifacts for pilot review.
 
 ## Phase VII: Course Operations
 

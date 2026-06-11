@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import math
+import re
 from pathlib import Path
 from sqlalchemy.orm import Session
 from ..models import FileArtifact, PromptLogEntry, Submission, ValidationCheck, ValidationReport
@@ -14,10 +15,18 @@ FILE_TYPE_LABELS = {
     "prompt_log": "Uploaded prompt log",
     "python_analysis": "Python analysis script",
     "ovito_script": "OVITO script",
+    "slurm_script": "Slurm batch script",
     "figure": "Figure",
     "data": "Data file",
     "other": "Other artifact",
 }
+
+FORBIDDEN_SCRIPT_PATTERNS = [
+    (re.compile(r"\brm\s+-rf\b", re.IGNORECASE), "destructive recursive delete"),
+    (re.compile(r"\b(?:curl|wget)\b", re.IGNORECASE), "network download"),
+    (re.compile(r"\b(?:subprocess|os\.system|eval|exec)\b", re.IGNORECASE), "dynamic command execution"),
+    (re.compile(r"\b(?:socket|requests|urllib)\b", re.IGNORECASE), "network access"),
+]
 
 
 def _check(check_type: str, status: str, severity: str, message: str, evidence: str = "") -> dict:
@@ -76,6 +85,276 @@ def _thermo_series(source: str, parsed: dict) -> dict | None:
     }
 
 
+def _read_text(file: FileArtifact, limit: int = 200_000) -> str:
+    try:
+        return Path(file.file_path).read_text(errors="replace")[:limit]
+    except OSError:
+        return ""
+
+
+def _forbidden_findings(text: str) -> list[str]:
+    findings: list[str] = []
+    for pattern, label in FORBIDDEN_SCRIPT_PATTERNS:
+        if pattern.search(text):
+            findings.append(label)
+    return findings
+
+
+def _normalized_lines(text: str) -> list[str]:
+    lines = []
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped and not stripped.startswith("#"):
+            lines.append(stripped.lower())
+    return lines
+
+
+def _has_lammps_command(lines: list[str], command: str) -> bool:
+    return any(line == command or line.startswith(f"{command} ") for line in lines)
+
+
+def _lint_lammps_input(file: FileArtifact) -> tuple[list[dict], list[dict]]:
+    text = _read_text(file)
+    lines = _normalized_lines(text)
+    checks: list[dict] = []
+    notes: list[dict] = []
+    required = {
+        "units": _has_lammps_command(lines, "units"),
+        "atom_style": _has_lammps_command(lines, "atom_style"),
+        "force field": _has_lammps_command(lines, "pair_style") or _has_lammps_command(lines, "pair_coeff"),
+        "thermo": _has_lammps_command(lines, "thermo") or _has_lammps_command(lines, "thermo_style"),
+        "run": _has_lammps_command(lines, "run"),
+    }
+    missing = [label for label, present in required.items() if not present]
+    fix_lines = [line for line in lines if line.startswith("fix ")]
+    ensemble_terms = [" nve", " nvt", " npt", " langevin", " temp/rescale"]
+    has_ensemble = any(any(term in f" {line}" for term in ensemble_terms) for line in fix_lines)
+    shell_lines = [line for line in lines if line.startswith("shell ")]
+
+    checks.append(
+        _check(
+            "lammps_input_structure",
+            "passed" if not missing else "warning",
+            "medium",
+            "LAMMPS input includes core setup commands" if not missing else "LAMMPS input is missing core setup commands",
+            f"missing={', '.join(missing) if missing else 'none'}",
+        )
+    )
+    checks.append(
+        _check(
+            "lammps_ensemble_fix",
+            "passed" if has_ensemble else "warning",
+            "medium",
+            "LAMMPS input includes a recognizable time-integration or thermostat fix" if has_ensemble else "No recognizable ensemble/time-integration fix found",
+            "; ".join(fix_lines[:3]) if fix_lines else "no fix commands detected",
+        )
+    )
+    if shell_lines:
+        checks.append(
+            _check(
+                "lammps_input_shell_commands",
+                "warning",
+                "high",
+                "LAMMPS input uses shell commands; verify this is safe and reproducible",
+                " | ".join(shell_lines[:3]),
+            )
+        )
+    notes.append(
+        _note(
+            "LAMMPS input lint",
+            "supported" if not missing and has_ensemble else "needs_review",
+            (
+                "The input script includes the expected setup, force-field, thermo, run, and ensemble cues."
+                if not missing and has_ensemble
+                else "The input script needs instructor/student review for missing setup or ensemble cues."
+            ),
+            file.original_filename,
+        )
+    )
+    return checks, notes
+
+
+def _lint_slurm_script(file: FileArtifact) -> tuple[list[dict], list[dict]]:
+    text = _read_text(file)
+    lower = text.lower()
+    directives = [line.strip() for line in text.splitlines() if line.strip().startswith("#SBATCH")]
+    has_resources = any(flag in lower for flag in ["--time", "-t ", "--nodes", "--ntasks", "--cpus-per-task", "--mem"])
+    has_launch = any(token in lower for token in ["srun", "mpirun", "mpiexec", "lmp", "lammps"])
+    forbidden = _forbidden_findings(text)
+    checks = [
+        _check(
+            "slurm_directives",
+            "passed" if directives else "warning",
+            "medium",
+            "Slurm directives detected" if directives else "No #SBATCH directives detected",
+            " | ".join(directives[:5]) if directives else file.original_filename,
+        ),
+        _check(
+            "slurm_resources",
+            "passed" if has_resources else "warning",
+            "medium",
+            "Slurm resource/time settings detected" if has_resources else "No clear Slurm resource or time settings detected",
+            file.original_filename,
+        ),
+        _check(
+            "slurm_launch_command",
+            "passed" if has_launch else "warning",
+            "medium",
+            "LAMMPS or MPI launch command detected" if has_launch else "No clear LAMMPS/MPI launch command detected",
+            file.original_filename,
+        ),
+        _check(
+            "slurm_script_safety",
+            "failed" if forbidden else "passed",
+            "high",
+            "Potentially unsafe script pattern detected" if forbidden else "No obvious destructive/network script patterns detected",
+            ", ".join(forbidden) if forbidden else file.original_filename,
+        ),
+    ]
+    notes = [
+        _note(
+            "Slurm reproducibility",
+            "supported" if directives and has_resources and has_launch and not forbidden else "needs_review",
+            (
+                "The Slurm script includes scheduler directives, resource hints, and a launch command."
+                if directives and has_resources and has_launch and not forbidden
+                else "Review the Slurm script for scheduler directives, resource requests, launch command, or unsafe patterns."
+            ),
+            file.original_filename,
+        )
+    ]
+    return checks, notes
+
+
+def _lint_python_analysis(file: FileArtifact) -> tuple[list[dict], list[dict]]:
+    text = _read_text(file)
+    lower = text.lower()
+    has_analysis_import = any(token in lower for token in ["import numpy", "import pandas", "import matplotlib", "from matplotlib", "import seaborn"])
+    has_input_read = any(token in lower for token in [".read_csv", "loadtxt", "genfromtxt", "open(", "read_text", "readtable"])
+    has_output = any(token in lower for token in ["savefig", "to_csv", "write_text", "json.dump", ".write("])
+    forbidden = _forbidden_findings(text)
+    checks = [
+        _check(
+            "python_analysis_structure",
+            "passed" if has_analysis_import and has_input_read else "warning",
+            "medium",
+            "Python analysis appears to import analysis libraries and read data" if has_analysis_import and has_input_read else "Python analysis script needs clearer imports or data reads",
+            f"analysis_import={has_analysis_import}; input_read={has_input_read}",
+        ),
+        _check(
+            "python_analysis_output",
+            "passed" if has_output else "warning",
+            "low",
+            "Python analysis appears to save or write an output" if has_output else "No obvious saved figure/table/output found",
+            file.original_filename,
+        ),
+        _check(
+            "python_analysis_safety",
+            "failed" if forbidden else "passed",
+            "high",
+            "Potentially unsafe Python pattern detected" if forbidden else "No obvious command execution or network access detected",
+            ", ".join(forbidden) if forbidden else file.original_filename,
+        ),
+    ]
+    notes = [
+        _note(
+            "Python analysis artifact",
+            "supported" if has_analysis_import and has_input_read and has_output and not forbidden else "needs_review",
+            (
+                "The Python script looks like a static analysis artifact with imports, input reads, and output generation."
+                if has_analysis_import and has_input_read and has_output and not forbidden
+                else "Review the Python script for analysis inputs, saved outputs, and safe reproducibility."
+            ),
+            file.original_filename,
+        )
+    ]
+    return checks, notes
+
+
+def _lint_ovito_script(file: FileArtifact) -> tuple[list[dict], list[dict]]:
+    text = _read_text(file)
+    lower = text.lower()
+    has_ovito = "import ovito" in lower or "from ovito" in lower
+    has_import_file = "import_file" in lower
+    has_processing = any(token in lower for token in ["modifiers.append", "coordinationanalysismodifier", "export_file", "pipeline.compute"])
+    forbidden = _forbidden_findings(text)
+    checks = [
+        _check(
+            "ovito_script_structure",
+            "passed" if has_ovito and has_import_file and has_processing else "warning",
+            "medium",
+            "OVITO script includes import, file load, and processing/export cues" if has_ovito and has_import_file and has_processing else "OVITO script needs clearer import/load/processing cues",
+            f"ovito_import={has_ovito}; import_file={has_import_file}; processing={has_processing}",
+        ),
+        _check(
+            "ovito_script_safety",
+            "failed" if forbidden else "passed",
+            "high",
+            "Potentially unsafe OVITO/Python pattern detected" if forbidden else "No obvious command execution or network access detected",
+            ", ".join(forbidden) if forbidden else file.original_filename,
+        ),
+    ]
+    notes = [
+        _note(
+            "OVITO artifact",
+            "supported" if has_ovito and has_import_file and has_processing and not forbidden else "needs_review",
+            (
+                "The OVITO script appears to load data and perform processing/export steps."
+                if has_ovito and has_import_file and has_processing and not forbidden
+                else "Review the OVITO script for clear data loading, processing, export, and safe reproducibility."
+            ),
+            file.original_filename,
+        )
+    ]
+    return checks, notes
+
+
+def _multi_log_comparison(parsed_logs: list[tuple[FileArtifact, dict]]) -> tuple[list[dict], list[dict]]:
+    if len(parsed_logs) < 2:
+        return [], []
+    row_sets = [(file, _rows(parsed)) for file, parsed in parsed_logs]
+    logs_with_rows = [(file, rows) for file, rows in row_sets if rows]
+    if len(logs_with_rows) < 2:
+        return [
+            _check("multi_log_comparison", "warning", "medium", "Multiple logs uploaded, but fewer than two include thermo rows", str(len(parsed_logs)))
+        ], [
+            _note("Multi-run comparison", "needs_context", "Multiple logs were uploaded, but there is not enough thermo data for comparison.", str(len(parsed_logs)))
+        ]
+
+    common_columns = set(logs_with_rows[0][1][0])
+    for _, rows in logs_with_rows[1:]:
+        common_columns &= set(rows[0])
+    completed_count = sum(1 for _, parsed in parsed_logs if parsed.get("completed"))
+    error_count = sum(1 for _, parsed in parsed_logs if parsed.get("errors"))
+    step_ranges = []
+    for file, rows in logs_with_rows:
+        if "Step" in rows[0]:
+            steps = [row["Step"] for row in rows if "Step" in row]
+            step_ranges.append(f"{file.original_filename}:{min(steps):.0f}-{max(steps):.0f}")
+    has_useful_common = {"Step", "Temp"} <= common_columns
+    status = "passed" if has_useful_common and error_count == 0 else "warning"
+    return [
+        _check(
+            "multi_log_comparison",
+            status,
+            "medium",
+            "Multiple LAMMPS logs are comparable" if status == "passed" else "Multiple LAMMPS logs need comparison review",
+            f"logs={len(parsed_logs)}; completed={completed_count}; errors={error_count}; common_columns={', '.join(sorted(common_columns))}; steps={' | '.join(step_ranges)}",
+        )
+    ], [
+        _note(
+            "Multi-run comparison",
+            "supported" if status == "passed" else "needs_review",
+            (
+                "Multiple logs share common thermo columns, enabling side-by-side comparison of runs."
+                if status == "passed"
+                else "Multiple logs were detected, but columns, completion, or errors need review before comparing runs."
+            ),
+            f"common_columns={', '.join(sorted(common_columns))}; steps={' | '.join(step_ranges)}",
+        )
+    ]
+
+
 def validate_submission(db: Session, submission: Submission) -> ValidationReport:
     assignment = submission.assignment
     validation_profile = assignment.validation_profile if assignment else "lammps_basic_health"
@@ -87,6 +366,7 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
     checks: list[dict] = []
     thermo_series: list[dict] = []
     interpretation_notes: list[dict] = []
+    parsed_logs: list[tuple[FileArtifact, dict]] = []
 
     def present(expected: set[str], label: str, required: bool) -> None:
         ok = bool(expected & file_types)
@@ -158,9 +438,27 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
     )
 
     for file in files:
+        if file.file_type == "lammps_input":
+            extra_checks, extra_notes = _lint_lammps_input(file)
+            checks.extend(extra_checks)
+            interpretation_notes.extend(extra_notes)
+        elif file.file_type == "slurm_script":
+            extra_checks, extra_notes = _lint_slurm_script(file)
+            checks.extend(extra_checks)
+            interpretation_notes.extend(extra_notes)
+        elif file.file_type == "python_analysis":
+            extra_checks, extra_notes = _lint_python_analysis(file)
+            checks.extend(extra_checks)
+            interpretation_notes.extend(extra_notes)
+        elif file.file_type == "ovito_script":
+            extra_checks, extra_notes = _lint_ovito_script(file)
+            checks.extend(extra_checks)
+            interpretation_notes.extend(extra_notes)
+
         if file.file_type != "lammps_log":
             continue
         parsed = parse_lammps_log(Path(file.file_path))
+        parsed_logs.append((file, parsed))
         series = _thermo_series(file.original_filename, parsed)
         if series:
             thermo_series.append(series)
@@ -373,6 +671,10 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
                     str(volumes[:8]),
                 )
             )
+
+    extra_checks, extra_notes = _multi_log_comparison(parsed_logs)
+    checks.extend(extra_checks)
+    interpretation_notes.extend(extra_notes)
 
     status = "passed"
     if any(check["status"] == "failed" for check in checks):

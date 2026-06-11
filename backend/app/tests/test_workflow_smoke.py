@@ -116,6 +116,9 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             for file_type, filename in [
                 ("lammps_input", "sample_input.in"),
                 ("lammps_log", "sample_good_nve.log"),
+                ("slurm_script", "sample_slurm.sbatch"),
+                ("python_analysis", "sample_analysis.py"),
+                ("ovito_script", "sample_ovito.py"),
             ]:
                 with (ROOT / "sample_data" / filename).open("rb") as handle:
                     upload = client.post(
@@ -131,6 +134,9 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert validation_body["status"] == "warning"
             assert not [check for check in validation_body["checks"] if check["status"] == "failed"]
             assert any(check["check_type"] == "energy_drift" for check in validation_body["checks"])
+            assert any(check["check_type"] == "slurm_directives" for check in validation_body["checks"])
+            assert any(check["check_type"] == "python_analysis_structure" for check in validation_body["checks"])
+            assert any(check["check_type"] == "ovito_script_structure" for check in validation_body["checks"])
             assert validation_body["thermo_series"]
             assert "TotEng" in validation_body["thermo_series"][0]["columns"]
             assert validation_body["interpretation_notes"]

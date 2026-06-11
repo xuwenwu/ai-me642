@@ -32,7 +32,7 @@ ASSIGNMENTS = [
         "due_offset_days": 14,
         "validation_profile": "lammps_basic_health",
         "required_file_types": ["lammps_input", "lammps_log"],
-        "optional_file_types": ["readme", "prompt_log", "figure", "data"],
+        "optional_file_types": ["readme", "prompt_log", "figure", "data", "slurm_script"],
         "validation_settings": {},
         "interpretation_prompts": [
             "What physical system and assumptions does your setup represent?",
@@ -51,7 +51,7 @@ ASSIGNMENTS = [
         "due_offset_days": 28,
         "validation_profile": "nvt_temperature_control",
         "required_file_types": ["lammps_input", "lammps_log"],
-        "optional_file_types": ["readme", "prompt_log", "figure", "python_analysis", "data"],
+        "optional_file_types": ["readme", "prompt_log", "figure", "python_analysis", "data", "slurm_script"],
         "validation_settings": {"target_temperature": 300, "temperature_tolerance": 75},
         "interpretation_prompts": [
             "What target temperature did you intend to control around, and why?",
@@ -70,7 +70,7 @@ ASSIGNMENTS = [
         "due_offset_days": 42,
         "validation_profile": "nve_energy_conservation",
         "required_file_types": ["lammps_input", "lammps_log"],
-        "optional_file_types": ["readme", "prompt_log", "python_analysis", "ovito_script", "figure", "data"],
+        "optional_file_types": ["readme", "prompt_log", "python_analysis", "ovito_script", "slurm_script", "figure", "data"],
         "validation_settings": {"energy_drift_warning_threshold": 0.05},
         "interpretation_prompts": [
             "What does the total-energy drift suggest about timestep stability?",

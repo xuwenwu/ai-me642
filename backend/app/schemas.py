@@ -51,6 +51,20 @@ class AssignmentOut(BaseModel):
     criteria: list[RubricCriterionOut] = Field(default_factory=list)
 
 
+class AssignmentManageIn(BaseModel):
+    title: str = Field(min_length=1)
+    description: str = ""
+    assignment_type: str = "lab"
+    due_date: str | None = None
+    total_points: float = 100
+    status: str = "published"
+    validation_profile: str = "lammps_basic_health"
+    required_file_types: list[str] = Field(default_factory=lambda: ["lammps_input", "lammps_log"])
+    optional_file_types: list[str] = Field(default_factory=list)
+    validation_settings: dict = Field(default_factory=dict)
+    interpretation_prompts: list[str] = Field(default_factory=list)
+
+
 class ProjectSpecIn(BaseModel):
     title: str
     material_system: str = ""
@@ -276,3 +290,22 @@ class RosterStudentOut(BaseModel):
     graded_count: int
     warning_count: int
     missing_count: int
+
+
+class RosterStudentIn(BaseModel):
+    full_name: str = Field(min_length=1)
+    email: str = Field(min_length=3)
+    section: str = "Pilot Section A"
+    password: str = "password123"
+
+
+class RosterImportIn(BaseModel):
+    csv_text: str = Field(min_length=1)
+    default_section: str = "Pilot Section A"
+
+
+class RosterImportOut(BaseModel):
+    created_count: int
+    updated_count: int
+    skipped_count: int
+    errors: list[str] = Field(default_factory=list)

@@ -31,26 +31,34 @@
 - Filter-aware gradebook export.
 - Clear grade-save confirmation on the instructor review page.
 
-## Phase IV: Responsible AI Pedagogy and Analytics
+## Phase IV: Assignment Authoring and Course Setup
+
+- Instructor assignment management page.
+- Create and edit title, due date, description, validation profile, status, evidence requirements, validation settings, and reflection prompts.
+- Manual student add/update.
+- CSV roster import.
+- Keep seeded demo assignments while enabling instructor-managed course setup.
+
+## Phase V: Responsible AI Pedagogy and Analytics
 
 - Instructor AI-use policy configuration.
 - Prompt templates by task type.
 - Rubric analytics for AI disclosure quality.
 - AI-disclosure quality dashboards.
 
-## Phase V: Rich Scientific Validation
+## Phase VI: Rich Scientific Validation
 
 - Slurm script linting without execution.
 - OVITO/Python artifact metadata checks.
 - Richer multi-run comparison for timestep and thermostat studies.
 
-## Phase VI: Course Operations
+## Phase VII: Course Operations
 
 - TA assignment workflows.
 - Gradebook dashboards.
 - Canvas or LMS handoff.
 
-## Phase VII: Controlled AI Integration
+## Phase VIII: Controlled AI Integration
 
 - Optional provider interface.
 - Full prompt/output logging.

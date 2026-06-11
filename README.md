@@ -1,6 +1,6 @@
 # AI-ME642 Responsible Scientific Computing Studio
 
-AI-ME642 is a Phase II pilot-ready rebuild of the ME642 Materials Modeling Studio. It is a local-first teaching platform for responsible AI-assisted scientific computing in molecular dynamics coursework.
+AI-ME642 is a pilot-ready rebuild of the ME642 Materials Modeling Studio. It is a local-first teaching platform for responsible AI-assisted scientific computing in molecular dynamics coursework.
 
 The core evidence chain is:
 
@@ -8,12 +8,12 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The Phase II pilot supports three assignment workflows with assignment-specific validation profiles and reflection prompts.
+The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, roster setup, instructor analytics, and grading.
 
 ## What This MVP Does
 
 - Seeded login for student, TA, and instructor roles.
-- One ME642 course and three seeded lab assignments with rubrics.
+- One ME642 course, three seeded demo lab assignments, and instructor assignment authoring.
 - Student project specification capture.
 - AI prompt-log disclosure with accepted/rejected/manual-edit fields.
 - Submission creation, artifact upload, validation, interpretation, and submission.
@@ -21,7 +21,7 @@ The Phase II pilot supports three assignment workflows with assignment-specific 
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Student reflection cues tied to each assignment.
-- Instructor/TA overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
+- Instructor/TA course setup, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
 - CSV gradebook export.
 - Filter-aware gradebook export for instructor queues.
 - Reproducible ZIP package export.

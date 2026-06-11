@@ -179,6 +179,57 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert {student["email"] for student in roster.json()} == {"student@example.edu", "student2@example.edu"}
             assert all(student["section"] == "Pilot Section A" for student in roster.json())
 
+            managed_assignment = client.post(
+                "/api/instructor/assignments",
+                headers=instructor_headers,
+                json={
+                    "title": "Lab 4: Phase IV Authoring Smoke",
+                    "description": "Instructor-authored assignment from the smoke test.",
+                    "assignment_type": "lab",
+                    "due_date": "2026-03-17",
+                    "total_points": 50,
+                    "status": "published",
+                    "validation_profile": "lammps_basic_health",
+                    "required_file_types": ["lammps_input", "lammps_log"],
+                    "optional_file_types": ["readme", "prompt_log"],
+                    "validation_settings": {},
+                    "interpretation_prompts": ["What changed after instructor setup?"],
+                },
+            )
+            assert managed_assignment.status_code == 200
+            managed_body = managed_assignment.json()
+            assert managed_body["title"] == "Lab 4: Phase IV Authoring Smoke"
+            assert managed_body["criteria"]
+
+            edited_assignment = client.patch(
+                f"/api/instructor/assignments/{managed_body['id']}",
+                headers=instructor_headers,
+                json={**managed_body, "title": "Lab 4: Edited Authoring Smoke", "optional_file_types": ["readme", "figure"]},
+            )
+            assert edited_assignment.status_code == 200
+            assert edited_assignment.json()["title"] == "Lab 4: Edited Authoring Smoke"
+            assert edited_assignment.json()["optional_file_types"] == ["readme", "figure"]
+
+            visible_assignments = client.get("/api/assignments", headers=student_headers)
+            assert visible_assignments.status_code == 200
+            assert any(item["title"] == "Lab 4: Edited Authoring Smoke" for item in visible_assignments.json())
+
+            roster_student = client.post(
+                "/api/instructor/roster/students",
+                headers=instructor_headers,
+                json={"full_name": "Katherine Student", "email": "student3@example.edu", "section": "Pilot Section B", "password": "password123"},
+            )
+            assert roster_student.status_code == 200
+            assert roster_student.json()["section"] == "Pilot Section B"
+
+            roster_import = client.post(
+                "/api/instructor/roster/import",
+                headers=instructor_headers,
+                json={"csv_text": "full_name,email,section\nNia Student,student4@example.edu,Pilot Section B\n", "default_section": "Pilot Section A"},
+            )
+            assert roster_import.status_code == 200
+            assert roster_import.json()["created_count"] == 1
+
             criteria = assignment["criteria"]
             grade = client.post(
                 "/api/instructor/grades",

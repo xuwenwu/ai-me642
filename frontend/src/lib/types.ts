@@ -29,6 +29,20 @@ export type Assignment = {
   criteria: Criterion[];
 };
 
+export type AssignmentManageInput = {
+  title: string;
+  description: string;
+  assignment_type: string;
+  due_date: string | null;
+  total_points: number;
+  status: string;
+  validation_profile: string;
+  required_file_types: string[];
+  optional_file_types: string[];
+  validation_settings: Record<string, unknown>;
+  interpretation_prompts: string[];
+};
+
 export type ProjectSpec = {
   id: number;
   title: string;
@@ -165,4 +179,11 @@ export type RosterStudent = {
   graded_count: number;
   warning_count: number;
   missing_count: number;
+};
+
+export type RosterImportResult = {
+  created_count: number;
+  updated_count: number;
+  skipped_count: number;
+  errors: string[];
 };

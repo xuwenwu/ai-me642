@@ -22,26 +22,35 @@
 - Grade summaries on submissions and CSV gradebook export.
 - Alembic bootstrap for migration-aware environments.
 
-## Phase III: Responsible AI Pedagogy and Analytics
+## Phase III: Instructor Operations and Pilot Analytics
+
+- Instructor overview dashboard.
+- Assignment-level submission, validation, grading, and attention counts.
+- Needs-attention queue for submitted packages with warnings, missing validation, missing interpretation, or ungraded state.
+- Roster/section groundwork for small-class pilots.
+- Filter-aware gradebook export.
+- Clear grade-save confirmation on the instructor review page.
+
+## Phase IV: Responsible AI Pedagogy and Analytics
 
 - Instructor AI-use policy configuration.
 - Prompt templates by task type.
 - Rubric analytics for AI disclosure quality.
-- Cohort-level completion and validation dashboards.
+- AI-disclosure quality dashboards.
 
-## Phase IV: Rich Scientific Validation
+## Phase V: Rich Scientific Validation
 
 - Slurm script linting without execution.
 - OVITO/Python artifact metadata checks.
 - Richer multi-run comparison for timestep and thermostat studies.
 
-## Phase V: Course Operations
+## Phase VI: Course Operations
 
-- Sections and TA assignment.
+- TA assignment workflows.
 - Gradebook dashboards.
-- Submission-status analytics.
+- Canvas or LMS handoff.
 
-## Phase VI: Controlled AI Integration
+## Phase VII: Controlled AI Integration
 
 - Optional provider interface.
 - Full prompt/output logging.

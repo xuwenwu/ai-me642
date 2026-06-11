@@ -163,6 +163,22 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert instructor_submissions.status_code == 200
             assert instructor_submissions.json()[0]["status"] == "submitted"
 
+            analytics = client.get("/api/instructor/analytics", headers=instructor_headers)
+            assert analytics.status_code == 200
+            analytics_body = analytics.json()
+            lab3_summary = next(item for item in analytics_body["assignments"] if item["assignment_id"] == assignment_id)
+            assert analytics_body["total_students"] == 2
+            assert lab3_summary["submitted_count"] == 1
+            assert lab3_summary["missing_count"] == 1
+            assert lab3_summary["validation_warning_count"] == 1
+            assert lab3_summary["ungraded_submitted_count"] == 1
+            assert analytics_body["needs_attention"]
+
+            roster = client.get("/api/instructor/roster", headers=instructor_headers)
+            assert roster.status_code == 200
+            assert {student["email"] for student in roster.json()} == {"student@example.edu", "student2@example.edu"}
+            assert all(student["section"] == "Pilot Section A" for student in roster.json())
+
             criteria = assignment["criteria"]
             grade = client.post(
                 "/api/instructor/grades",
@@ -180,9 +196,19 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert grade.status_code == 200
             assert grade.json()["final_score"] == 100
 
-            gradebook = client.get("/api/instructor/gradebook.csv", headers=instructor_headers)
+            graded_analytics = client.get("/api/instructor/analytics", headers=instructor_headers)
+            assert graded_analytics.status_code == 200
+            graded_lab3_summary = next(item for item in graded_analytics.json()["assignments"] if item["assignment_id"] == assignment_id)
+            assert graded_lab3_summary["graded_count"] == 1
+            assert graded_lab3_summary["ungraded_submitted_count"] == 0
+
+            gradebook = client.get(
+                f"/api/instructor/gradebook.csv?assignment_id={assignment_id}&grade_state=graded",
+                headers=instructor_headers,
+            )
             assert gradebook.status_code == 200
             assert "student@example.edu" in gradebook.text
+            assert "Pilot Section A" in gradebook.text
             assert "100.0" in gradebook.text
     finally:
         app.dependency_overrides.pop(get_db, None)

@@ -23,6 +23,7 @@ export default function InstructorSubmissionsPage() {
   const [latePenalty, setLatePenalty] = useState(0);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [gradeMessage, setGradeMessage] = useState('');
 
   const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
   const filteredSubmissions = useMemo(() => {
@@ -51,6 +52,16 @@ export default function InstructorSubmissionsPage() {
   const needsGradingCount = submissions.filter((submission) => submission.status === 'submitted' && !submission.grade).length;
   const warningCount = submissions.filter((submission) => submission.validation_reports[0]?.status === 'warning').length;
 
+  const gradebookPath = useMemo(() => {
+    const params = new URLSearchParams();
+    if (assignmentFilter !== 'all') params.set('assignment_id', assignmentFilter);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (validationFilter !== 'all') params.set('validation_status', validationFilter);
+    if (gradeFilter !== 'all') params.set('grade_state', gradeFilter);
+    const query = params.toString();
+    return `/instructor/gradebook.csv${query ? `?${query}` : ''}`;
+  }, [assignmentFilter, gradeFilter, statusFilter, validationFilter]);
+
   async function load() {
     const [a, s] = await Promise.all([api<Assignment[]>('/assignments'), api<Submission[]>('/instructor/submissions')]);
     setAssignments(a);
@@ -62,13 +73,20 @@ export default function InstructorSubmissionsPage() {
     load().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load instructor page'));
   }, []);
 
+  useEffect(() => {
+    setGradeMessage('');
+    setFeedback(selected?.grade?.feedback || '');
+    setLatePenalty(selected?.grade?.late_penalty || 0);
+  }, [selected?.id]);
+
   async function saveGrade(event: React.FormEvent) {
     event.preventDefault();
     if (!selected || !assignment) return;
     setError('');
     setMessage('');
+    setGradeMessage('');
     try {
-      await api('/instructor/grades', {
+      const grade = await api<{ final_score: number }>('/instructor/grades', {
         method: 'POST',
         body: JSON.stringify({
           submission_id: selected.id,
@@ -83,6 +101,7 @@ export default function InstructorSubmissionsPage() {
       });
       await load();
       setMessage('Grade saved');
+      setGradeMessage(`Grade saved. Final score: ${grade.final_score}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save grade');
     }
@@ -132,7 +151,7 @@ export default function InstructorSubmissionsPage() {
               </option>
             ))}
           </select>
-          <button className="secondary" onClick={() => download('/instructor/gradebook.csv', 'gradebook.csv')}>Download gradebook</button>
+          <button className="secondary" onClick={() => download(gradebookPath, 'gradebook.csv')}>Download filtered gradebook</button>
         </div>
       </section>
       {selected ? (
@@ -157,6 +176,7 @@ export default function InstructorSubmissionsPage() {
           <section className="card">
             <h2>Rubric Grade</h2>
             {selected.grade ? <p className="muted">Current final score: {selected.grade.final_score}</p> : null}
+            {gradeMessage ? <div className="inline-success" role="status">{gradeMessage}</div> : null}
             <form className="form" onSubmit={saveGrade}>
               {assignment?.criteria.map((criterion) => (
                 <div key={criterion.id}>

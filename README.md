@@ -21,8 +21,9 @@ The Phase II pilot supports three assignment workflows with assignment-specific 
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Student reflection cues tied to each assignment.
-- Instructor/TA submission queue filters, evidence review, and rubric grading.
+- Instructor/TA overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
 - CSV gradebook export.
+- Filter-aware gradebook export for instructor queues.
 - Reproducible ZIP package export.
 
 ## What This MVP Does Not Do

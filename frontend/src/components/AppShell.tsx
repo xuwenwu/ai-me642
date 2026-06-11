@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/projects/new">Project Spec</Link>
           <Link href="/prompt-logs">Prompt Logs</Link>
           <Link href="/submissions">Submission</Link>
-          {ready && isStaff(user) ? <Link href="/instructor/submissions">Instructor</Link> : null}
+          {ready && isStaff(user) ? <Link href="/instructor">Instructor</Link> : null}
           {ready && user ? <button className="secondary" onClick={logout}>Logout</button> : <Link href="/login">Login</Link>}
         </nav>
       </header>

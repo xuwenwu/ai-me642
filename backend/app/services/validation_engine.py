@@ -7,6 +7,19 @@ from ..models import FileArtifact, PromptLogEntry, Submission, ValidationCheck, 
 from .lammps_log_parser import parse_lammps_log
 
 
+FILE_TYPE_LABELS = {
+    "lammps_input": "LAMMPS input script",
+    "lammps_log": "LAMMPS log",
+    "readme": "README/reproducibility notes",
+    "prompt_log": "Uploaded prompt log",
+    "python_analysis": "Python analysis script",
+    "ovito_script": "OVITO script",
+    "figure": "Figure",
+    "data": "Data file",
+    "other": "Other artifact",
+}
+
+
 def _check(check_type: str, status: str, severity: str, message: str, evidence: str = "") -> dict:
     return {
         "check_type": check_type,
@@ -64,6 +77,11 @@ def _thermo_series(source: str, parsed: dict) -> dict | None:
 
 
 def validate_submission(db: Session, submission: Submission) -> ValidationReport:
+    assignment = submission.assignment
+    validation_profile = assignment.validation_profile if assignment else "lammps_basic_health"
+    validation_settings = assignment.validation_settings if assignment else {}
+    required_file_types = assignment.required_file_types if assignment else ["lammps_input", "lammps_log"]
+    optional_file_types = assignment.optional_file_types if assignment else ["readme", "prompt_log", "python_analysis", "ovito_script", "figure"]
     files: list[FileArtifact] = list(submission.files)
     file_types = {file.file_type for file in files}
     checks: list[dict] = []
@@ -82,11 +100,17 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             )
         )
 
-    present({"lammps_input"}, "LAMMPS input script", True)
-    present({"lammps_log"}, "LAMMPS log", True)
-    present({"readme"}, "README/reproducibility notes", False)
-    present({"python_analysis", "ovito_script", "figure"}, "Analysis script, OVITO script, or figure", False)
-    if "readme" not in file_types:
+    for file_type in required_file_types:
+        present({file_type}, FILE_TYPE_LABELS.get(file_type, file_type), True)
+
+    if "readme" in optional_file_types:
+        present({"readme"}, FILE_TYPE_LABELS["readme"], False)
+
+    supporting_optional = set(optional_file_types) - {"readme", "prompt_log"}
+    if supporting_optional:
+        present(supporting_optional, "Supporting analysis artifact", False)
+
+    if "readme" in optional_file_types and "readme" not in file_types:
         interpretation_notes.append(
             _note(
                 "Reproducibility notes",
@@ -256,29 +280,58 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
                     f"start={temps[0]:.3g}, end={temps[-1]:.3g}, drift={drift:.3g}",
                 )
             )
-        if "TotEng" in rows[0] and len(rows) > 1:
+            if validation_profile == "nvt_temperature_control":
+                target = float(validation_settings.get("target_temperature", 300))
+                tolerance = float(validation_settings.get("temperature_tolerance", 75))
+                tail = temps[len(temps) // 2 :] or temps
+                tail_average = sum(tail) / len(tail)
+                deviation = abs(tail_average - target)
+                passed = not bad and deviation <= tolerance
+                checks.append(
+                    _check(
+                        "nvt_temperature_control",
+                        "passed" if passed else "warning",
+                        "medium",
+                        "Average late-run temperature is near target" if passed else "Average late-run temperature is outside target tolerance",
+                        f"target={target:.3g}, tolerance={tolerance:.3g}, late_average={tail_average:.3g}, deviation={deviation:.3g}",
+                    )
+                )
+                interpretation_notes.append(
+                    _note(
+                        "NVT temperature control",
+                        "supported" if passed else "needs_review",
+                        (
+                            "Late-run temperature is near the configured target, supporting the thermostat-control interpretation."
+                            if passed
+                            else "Late-run temperature differs from the configured target enough to require discussion."
+                        ),
+                        f"target={target:.3g}, tolerance={tolerance:.3g}, late_average={tail_average:.3g}",
+                    )
+                )
+        if validation_profile == "nve_energy_conservation" and "TotEng" in rows[0] and len(rows) > 1:
             initial = rows[0]["TotEng"]
             final = rows[-1]["TotEng"]
             relative = abs(final - initial) / max(abs(initial), 1e-9)
+            threshold = float(validation_settings.get("energy_drift_warning_threshold", 0.05))
             interpretation_notes.append(
                 _note(
                     "Energy conservation",
-                    "needs_review" if relative > 0.05 else "supported",
+                    "needs_review" if relative > threshold else "supported",
                     (
                         "Total-energy drift is large enough to question timestep stability or setup choices."
-                        if relative > 0.05
+                        if relative > threshold
                         else "Total-energy drift is small for this parsed NVE sample, supporting the timestep-stability interpretation."
                     ),
-                    f"initial={initial:.6g}, final={final:.6g}, relative={relative:.3g}",
+                    f"initial={initial:.6g}, final={final:.6g}, relative={relative:.3g}, threshold={threshold:.3g}",
                 )
             )
             checks.append(
                 _check(
                     "energy_drift",
-                    "warning" if relative > 0.05 else "passed",
+                    "warning" if relative > threshold else "passed",
                     "medium",
                     "Estimated total-energy drift",
-                    f"initial={initial:.6g}, final={final:.6g}, relative={relative:.3g}",
+                    f"initial={initial:.6g}, final={final:.6g}, relative={relative:.3g}, threshold={threshold:.3g}",
                 )
             )
         if "Press" in rows[0]:
@@ -330,7 +383,8 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
     report = ValidationReport(
         submission_id=submission.id,
         status=status,
-        summary=f"Automated validation completed with status: {status}. This is advisory evidence, not a grade.",
+        summary=f"Automated validation completed with status: {status} using profile: {validation_profile}. This is advisory evidence, not a grade.",
+        validation_profile=validation_profile,
         thermo_json=json.dumps(thermo_series),
         interpretation_json=json.dumps(interpretation_notes),
     )

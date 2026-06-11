@@ -19,6 +19,11 @@ def _assignment_out(assignment: Assignment) -> AssignmentOut:
         due_date=assignment.due_date,
         total_points=assignment.total_points,
         status=assignment.status,
+        validation_profile=assignment.validation_profile,
+        required_file_types=assignment.required_file_types,
+        optional_file_types=assignment.optional_file_types,
+        validation_settings=assignment.validation_settings,
+        interpretation_prompts=assignment.interpretation_prompts,
         criteria=[RubricCriterionOut.model_validate(c) for c in criteria],
     )
 
@@ -44,4 +49,3 @@ def get_assignment(
 
         raise HTTPException(status_code=404, detail="Assignment not found")
     return _assignment_out(assignment)
-

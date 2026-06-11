@@ -53,7 +53,9 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
 
             assignments = client.get("/api/assignments", headers=student_headers)
             assert assignments.status_code == 200
-            assignment_id = assignments.json()[0]["id"]
+            assignment = next(item for item in assignments.json() if item["validation_profile"] == "nve_energy_conservation")
+            assert assignment["interpretation_prompts"]
+            assignment_id = assignment["id"]
 
             project = client.post(
                 "/api/projects",
@@ -161,7 +163,7 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert instructor_submissions.status_code == 200
             assert instructor_submissions.json()[0]["status"] == "submitted"
 
-            criteria = assignments.json()[0]["criteria"]
+            criteria = assignment["criteria"]
             grade = client.post(
                 "/api/instructor/grades",
                 headers=instructor_headers,

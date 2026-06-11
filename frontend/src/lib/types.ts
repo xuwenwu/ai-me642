@@ -21,6 +21,11 @@ export type Assignment = {
   due_date: string | null;
   total_points: number;
   status: string;
+  validation_profile: string;
+  required_file_types: string[];
+  optional_file_types: string[];
+  validation_settings: Record<string, unknown>;
+  interpretation_prompts: string[];
   criteria: Criterion[];
 };
 
@@ -80,9 +85,19 @@ export type ValidationReport = {
   id: number;
   status: string;
   summary: string;
+  validation_profile: string;
   checks: ValidationCheck[];
   thermo_series: ThermoSeries[];
   interpretation_notes: InterpretationNote[];
+};
+
+export type GradeSummary = {
+  id: number;
+  rubric_score: number;
+  late_penalty: number;
+  final_score: number;
+  feedback: string;
+  graded_at: string;
 };
 
 export type Submission = {
@@ -95,4 +110,5 @@ export type Submission = {
   student_interpretation: string;
   files: FileArtifact[];
   validation_reports: ValidationReport[];
+  grade: GradeSummary | null;
 };

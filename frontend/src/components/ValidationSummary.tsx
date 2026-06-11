@@ -1,26 +1,38 @@
-import type { Submission, ValidationReport } from '@/lib/types';
+import type { Assignment, Submission, ValidationReport } from '@/lib/types';
 
-const requiredFiles = [
-  { type: 'lammps_input', label: 'LAMMPS input' },
-  { type: 'lammps_log', label: 'LAMMPS log' },
-];
+export const fileTypeLabels: Record<string, string> = {
+  lammps_input: 'LAMMPS input',
+  lammps_log: 'LAMMPS log',
+  readme: 'README',
+  prompt_log: 'Prompt upload',
+  python_analysis: 'Analysis script',
+  ovito_script: 'OVITO script',
+  figure: 'Figure',
+  data: 'Data file',
+  other: 'Other',
+};
 
-const optionalEvidence = [
-  { type: 'readme', label: 'README' },
-  { type: 'python_analysis', label: 'Analysis script' },
-  { type: 'ovito_script', label: 'OVITO script' },
-  { type: 'figure', label: 'Figure' },
-  { type: 'prompt_log', label: 'Prompt upload' },
-];
+const defaultRequiredFiles = ['lammps_input', 'lammps_log'];
+const defaultOptionalEvidence = ['readme', 'python_analysis', 'ovito_script', 'figure', 'prompt_log'];
+
+function evidenceItems(assignment: Assignment | undefined) {
+  const required = assignment?.required_file_types?.length ? assignment.required_file_types : defaultRequiredFiles;
+  const optional = assignment?.optional_file_types?.length ? assignment.optional_file_types : defaultOptionalEvidence;
+  return {
+    required: required.map((type) => ({ type, label: fileTypeLabels[type] ?? type })),
+    optional: optional.map((type) => ({ type, label: fileTypeLabels[type] ?? type })),
+  };
+}
 
 function countChecks(report: ValidationReport | undefined, status: string) {
   return report?.checks.filter((check) => check.status === status).length ?? 0;
 }
 
-export function nextSubmissionAction(submission: Submission | undefined) {
+export function nextSubmissionAction(submission: Submission | undefined, assignment?: Assignment) {
   if (!submission) return 'Create a submission';
   const fileTypes = new Set(submission.files.map((file) => file.file_type));
-  const missingRequired = requiredFiles.filter((file) => !fileTypes.has(file.type));
+  const { required } = evidenceItems(assignment);
+  const missingRequired = required.filter((file) => !fileTypes.has(file.type));
   if (missingRequired.length) return `Upload ${missingRequired.map((file) => file.label).join(' and ')}`;
   if (!submission.validation_reports[0]) return 'Run validation';
   if (!submission.student_interpretation.trim()) return 'Write interpretation';
@@ -28,16 +40,25 @@ export function nextSubmissionAction(submission: Submission | undefined) {
   return 'Submitted';
 }
 
-export function EvidenceChecklist({ submission }: { submission: Submission }) {
+export function EvidenceChecklist({ submission, assignment }: { submission: Submission; assignment?: Assignment }) {
   const fileTypes = new Set(submission.files.map((file) => file.file_type));
+  const { required, optional } = evidenceItems(assignment);
 
   return (
     <div className="evidence-list">
-      {[...requiredFiles, ...optionalEvidence].map((item) => {
+      {required.map((item) => {
         const present = fileTypes.has(item.type);
         return (
           <span key={item.type} className={`evidence-pill ${present ? 'present' : 'missing'}`}>
-            {item.label}: {present ? 'present' : 'missing'}
+            {item.label}: {present ? 'present' : 'required'}
+          </span>
+        );
+      })}
+      {optional.map((item) => {
+        const present = fileTypes.has(item.type);
+        return (
+          <span key={item.type} className={`evidence-pill ${present ? 'present' : 'missing'}`}>
+            {item.label}: {present ? 'present' : 'optional'}
           </span>
         );
       })}

@@ -1,6 +1,6 @@
 # Local Smoke Test
 
-Use this checklist after setup, after major changes, or before making a commit. It verifies the Phase I-plus evidence chain without requiring external services.
+Use this checklist after setup, after major changes, or before making a commit. It verifies the Phase II pilot evidence chain without requiring external services.
 
 The automated API version of this workflow is `backend/app/tests/test_workflow_smoke.py`. Run it with:
 
@@ -48,7 +48,7 @@ Log in with:
 Expected:
 
 - Dashboard loads.
-- The Lab 3 assignment is visible.
+- The three pilot lab assignments are visible.
 - The user does not see the instructor navigation link.
 
 Create a project specification:

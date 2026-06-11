@@ -1,6 +1,6 @@
 # AI-ME642 Responsible Scientific Computing Studio
 
-AI-ME642 is a clean Phase I-plus rebuild of the ME642 Materials Modeling Studio. It is a local-first teaching platform for responsible AI-assisted scientific computing in molecular dynamics coursework.
+AI-ME642 is a Phase II pilot-ready rebuild of the ME642 Materials Modeling Studio. It is a local-first teaching platform for responsible AI-assisted scientific computing in molecular dynamics coursework.
 
 The core evidence chain is:
 
@@ -8,19 +8,20 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The Phase I-plus rebuild focuses on one complete assignment workflow: **Lab 3: NVE Energy Conservation and Timestep Stability**.
+The Phase II pilot supports three assignment workflows with assignment-specific validation profiles and reflection prompts.
 
 ## What This MVP Does
 
 - Seeded login for student, TA, and instructor roles.
-- One ME642 course and one Lab 3 assignment with a rubric.
+- One ME642 course and three seeded lab assignments with rubrics.
 - Student project specification capture.
 - AI prompt-log disclosure with accepted/rejected/manual-edit fields.
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
-- Conservative validation checks for completeness, log health, temperature, energy drift, pressure, volume, and step monotonicity.
+- Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
-- Instructor/TA submission review and rubric grading.
+- Student reflection cues tied to each assignment.
+- Instructor/TA submission queue filters, evidence review, and rubric grading.
 - CSV gradebook export.
 - Reproducible ZIP package export.
 
@@ -55,6 +56,13 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 The backend serves `http://127.0.0.1:8000/api`.
+
+For a fresh local database, the reset script is still the fastest path. For migration-aware environments, Alembic is now configured:
+
+```powershell
+cd backend
+.\.venv\Scripts\alembic.exe upgrade head
+```
 
 ## Frontend
 
@@ -131,6 +139,8 @@ The reset script refuses non-SQLite databases and only removes local ignored dat
 ## Smoke Test
 
 Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before commits or larger changes.
+
+For pilot review, also use `docs/PILOT_READINESS.md`.
 
 ## Design Principle
 

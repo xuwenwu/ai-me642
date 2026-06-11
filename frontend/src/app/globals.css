@@ -139,6 +139,35 @@ textarea {
   gap: 0.85rem;
 }
 
+.filter-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.assignment-row {
+  border-top: 1px solid var(--line);
+  padding: 0.85rem 0;
+}
+
+.assignment-row:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.assignment-context,
+.prompt-cues {
+  background: #f4f7f5;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.assignment-context p,
+.prompt-cues p {
+  margin: 0.35rem 0 0;
+}
+
 .status {
   border-radius: 999px;
   display: inline-block;

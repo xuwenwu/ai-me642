@@ -23,6 +23,8 @@ export default function DashboardPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load dashboard'));
   }, [ready, user]);
 
+  const submissionByAssignment = new Map(submissions.map((submission) => [submission.assignment_id, submission]));
+
   return (
     <AppShell>
       <h1>Dashboard</h1>
@@ -30,15 +32,22 @@ export default function DashboardPage() {
       {error ? <div className="error">{error}</div> : null}
       <div className="grid two">
         <section className="card">
-          <h2>Phase I-Plus Assignment</h2>
-          {assignments.map((assignment) => (
-            <div key={assignment.id}>
-              <h3>{assignment.title}</h3>
-              <p>{assignment.description}</p>
-              <p className="muted">Due: {assignment.due_date || 'not set'} · {assignment.total_points} pts</p>
-              <Link href="/submissions">Open submission workflow</Link>
-            </div>
-          ))}
+          <h2>Phase II Pilot Labs</h2>
+          {assignments.map((assignment) => {
+            const submission = submissionByAssignment.get(assignment.id);
+            return (
+              <div key={assignment.id} className="assignment-row">
+                <div className="section-header">
+                  <h3>{assignment.title}</h3>
+                  <span className="status">{submission?.status || 'not started'}</span>
+                </div>
+                <p>{assignment.description}</p>
+                <p className="muted">Due: {assignment.due_date || 'not set'} - {assignment.total_points} pts - {assignment.validation_profile}</p>
+                <p className="muted">Validation: {submission?.validation_reports[0]?.status || 'not run'}</p>
+                <Link href="/submissions">Open submission workflow</Link>
+              </div>
+            );
+          })}
         </section>
         <section className="card">
           <h2>Evidence Chain</h2>
@@ -57,7 +66,7 @@ export default function DashboardPage() {
         <h2>Your Submissions</h2>
         {submissions.length ? (
           <table>
-            <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Validation</th></tr></thead>
+            <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Validation</th><th>Grade</th></tr></thead>
             <tbody>
               {submissions.map((submission) => (
                 <tr key={submission.id}>
@@ -65,6 +74,7 @@ export default function DashboardPage() {
                   <td>{submission.title}</td>
                   <td>{submission.status}</td>
                   <td>{submission.validation_reports[0]?.status || 'not run'}</td>
+                  <td>{submission.grade ? `${submission.grade.final_score}` : 'not graded'}</td>
                 </tr>
               ))}
             </tbody>
@@ -74,4 +84,3 @@ export default function DashboardPage() {
     </AppShell>
   );
 }
-

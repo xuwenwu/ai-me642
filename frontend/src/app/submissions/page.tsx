@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
-import { EvidenceChecklist, ValidationSummary, nextSubmissionAction } from '@/components/ValidationSummary';
+import { EvidenceChecklist, ValidationSummary, fileTypeLabels, nextSubmissionAction } from '@/components/ValidationSummary';
 import { ApiError, api, download } from '@/lib/api';
 import type { Assignment, FileArtifact, ProjectSpec, Submission, ValidationReport } from '@/lib/types';
 
@@ -27,14 +27,16 @@ export default function SubmissionsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [createForm, setCreateForm] = useState({ assignment_id: '', project_id: '', title: 'Lab 3 NVE validation package' });
+  const [createForm, setCreateForm] = useState({ assignment_id: '', project_id: '', title: '' });
   const [fileType, setFileType] = useState('lammps_log');
   const [file, setFile] = useState<File | null>(null);
   const [interpretation, setInterpretation] = useState('');
 
   const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
+  const selectedAssignment = useMemo(() => assignments.find((assignment) => assignment.id === selected?.assignment_id), [assignments, selected]);
+  const draftAssignment = useMemo(() => assignments.find((assignment) => assignment.id === Number(createForm.assignment_id)), [assignments, createForm.assignment_id]);
   const latestReport = selected?.validation_reports[0];
-  const nextAction = nextSubmissionAction(selected);
+  const nextAction = nextSubmissionAction(selected, selectedAssignment);
 
   async function load() {
     const [a, p, s] = await Promise.all([api<Assignment[]>('/assignments'), api<ProjectSpec[]>('/projects'), api<Submission[]>('/submissions')]);
@@ -158,10 +160,24 @@ export default function SubmissionsPage() {
         <section className="card">
           <h2>Create Submission</h2>
           <form className="form" onSubmit={createSubmission}>
-            <label>Assignment<select value={createForm.assignment_id} onChange={(e) => setCreateForm({ ...createForm, assignment_id: e.target.value })} required>
+            <label>Assignment<select value={createForm.assignment_id} onChange={(e) => {
+              const nextAssignment = assignments.find((assignment) => assignment.id === Number(e.target.value));
+              setCreateForm({
+                ...createForm,
+                assignment_id: e.target.value,
+                title: createForm.title || (nextAssignment ? `${nextAssignment.title} package` : ''),
+              });
+            }} required>
               <option value="">Select assignment</option>
               {assignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.title}</option>)}
             </select></label>
+            {draftAssignment ? (
+              <div className="assignment-context">
+                <strong>{draftAssignment.validation_profile}</strong>
+                <p>{draftAssignment.description}</p>
+                <p className="muted">Due: {draftAssignment.due_date || 'not set'} - {draftAssignment.total_points} pts</p>
+              </div>
+            ) : null}
             <label>Project<select value={createForm.project_id} onChange={(e) => setCreateForm({ ...createForm, project_id: e.target.value })}>
               <option value="">Optional project</option>
               {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
@@ -179,7 +195,9 @@ export default function SubmissionsPage() {
             <div>
               <p>Status: <strong>{selected.status}</strong></p>
               <p>Next: <strong>{nextAction}</strong></p>
+              <p>Assignment: {selectedAssignment?.title || selected.assignment_id}</p>
               <p>Latest validation: {latestReport?.status || 'not run'}</p>
+              <p className="muted">Profile: {latestReport?.validation_profile || selectedAssignment?.validation_profile || 'not set'}</p>
             </div>
           ) : <p className="muted">Create a submission to begin.</p>}
         </section>
@@ -191,14 +209,17 @@ export default function SubmissionsPage() {
               <h2>Evidence Status</h2>
               <span className="status warning">{nextAction}</span>
             </div>
+            {selectedAssignment ? (
+              <p className="muted">{selectedAssignment.title} - {selectedAssignment.validation_profile}</p>
+            ) : null}
             <ValidationSummary submission={selected} report={latestReport} />
-            <EvidenceChecklist submission={selected} />
+            <EvidenceChecklist submission={selected} assignment={selectedAssignment} />
           </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <h2>Upload Artifacts</h2>
             <form className="form" onSubmit={uploadArtifact}>
               <label>File type<select value={fileType} onChange={(e) => setFileType(e.target.value)}>
-                {fileTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                {fileTypes.map((type) => <option key={type} value={type}>{fileTypeLabels[type] ?? type}</option>)}
               </select></label>
               <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               <button disabled={!file}>Upload</button>
@@ -243,6 +264,11 @@ export default function SubmissionsPage() {
           </section>
           <section className="card" style={{ marginTop: '1rem' }}>
             <h2>Student Interpretation</h2>
+            {selectedAssignment?.interpretation_prompts.length ? (
+              <div className="prompt-cues">
+                {selectedAssignment.interpretation_prompts.map((prompt) => <p key={prompt}>{prompt}</p>)}
+              </div>
+            ) : null}
             <textarea value={interpretation} onChange={(e) => setInterpretation(e.target.value)} />
             <div className="row" style={{ marginTop: '0.75rem' }}>
               <button onClick={saveInterpretation}>Save interpretation</button>

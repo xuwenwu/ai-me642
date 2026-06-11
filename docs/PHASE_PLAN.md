@@ -12,30 +12,37 @@
 - Instructor grading.
 - Reproducible ZIP export.
 
-## Phase II: Responsible AI Pedagogy
+## Phase II: Small-Class Pilot Readiness
 
-- Instructor AI-use policy.
-- Prompt templates.
-- Reflection prompts by task type.
+- Three seeded lab assignments.
+- Assignment-specific validation profiles.
+- Assignment-specific reflection prompts.
+- Student submission workflow that reads assignment requirements.
+- Instructor queue filters for assignment, status, validation, grade state, and search.
+- Grade summaries on submissions and CSV gradebook export.
+- Alembic bootstrap for migration-aware environments.
+
+## Phase III: Responsible AI Pedagogy and Analytics
+
+- Instructor AI-use policy configuration.
+- Prompt templates by task type.
 - Rubric analytics for AI disclosure quality.
+- Cohort-level completion and validation dashboards.
 
-## Phase III: Rich Scientific Validation
+## Phase IV: Rich Scientific Validation
 
-- Thermo plots.
-- Assignment-specific rules.
 - Slurm script linting without execution.
 - OVITO/Python artifact metadata checks.
+- Richer multi-run comparison for timestep and thermostat studies.
 
-## Phase IV: Course Operations
+## Phase V: Course Operations
 
-- Multiple assignments.
 - Sections and TA assignment.
 - Gradebook dashboards.
 - Submission-status analytics.
 
-## Phase V: Controlled AI Integration
+## Phase VI: Controlled AI Integration
 
 - Optional provider interface.
 - Full prompt/output logging.
 - Instructor-configured permissions and retention.
-

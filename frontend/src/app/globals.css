@@ -145,6 +145,25 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
+.check-panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding: 0.75rem;
+}
+
+.check-panel input {
+  margin-right: 0.4rem;
+  width: auto;
+}
+
+.check-panel legend {
+  color: var(--muted);
+  padding: 0 0.35rem;
+}
+
 .assignment-row {
   border-top: 1px solid var(--line);
   padding: 0.85rem 0;

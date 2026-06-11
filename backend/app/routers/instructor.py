@@ -1,24 +1,41 @@
 from __future__ import annotations
 import csv
+import json
 from io import StringIO
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from ..auth import hash_password
 from ..database import get_db
 from ..deps import staff_user
-from ..models import Assignment, CriterionScore, Enrollment, Grade, RubricCriterion, Submission, User
+from ..models import Assignment, Course, CriterionScore, Enrollment, Grade, Rubric, RubricCriterion, Section, Submission, User
 from ..schemas import (
+    AssignmentManageIn,
     AssignmentAnalyticsOut,
+    AssignmentOut,
     GradeIn,
     GradeOut,
     InstructorAnalyticsOut,
     NeedsAttentionOut,
+    RosterImportIn,
+    RosterImportOut,
+    RosterStudentIn,
     RosterStudentOut,
+    RubricCriterionOut,
     SubmissionOut,
 )
 
 
 router = APIRouter(prefix="/instructor", tags=["instructor"])
+
+
+DEFAULT_CRITERIA = [
+    ("Conceptual correctness", 20, "Materials-modeling assumptions, ensemble choice, and scientific framing are correct."),
+    ("Script/workflow correctness", 20, "LAMMPS/OVITO/Python workflow is coherent and reproducible."),
+    ("Simulation validation", 25, "Validation evidence is complete, physically reasonable, and interpreted accurately."),
+    ("Interpretation and communication", 20, "Student explains findings, limitations, and uncertainty clearly."),
+    ("Reproducibility and AI disclosure", 15, "Artifacts, README, prompt logs, manual edits, and concerns are documented."),
+]
 
 
 def _latest_validation_status(submission: Submission) -> str:
@@ -73,12 +90,175 @@ def _filtered_submissions(
     return filtered
 
 
+def _default_course(db: Session) -> Course:
+    course = db.query(Course).filter_by(code="ME642").first() or db.query(Course).order_by(Course.id).first()
+    if not course:
+        course = Course(code="ME642", title="Materials Modeling", term="Spring 2026")
+        db.add(course)
+        db.flush()
+    return course
+
+
+def _section(db: Session, course: Course, name: str) -> Section:
+    section_name = name.strip() or "Pilot Section A"
+    section = db.query(Section).filter_by(course_id=course.id, name=section_name).first()
+    if not section:
+        section = Section(course_id=course.id, name=section_name, term=course.term)
+        db.add(section)
+        db.flush()
+    return section
+
+
+def _assignment_out(assignment: Assignment) -> AssignmentOut:
+    criteria = assignment.rubric.criteria if assignment.rubric else []
+    return AssignmentOut(
+        id=assignment.id,
+        title=assignment.title,
+        description=assignment.description,
+        assignment_type=assignment.assignment_type,
+        due_date=assignment.due_date,
+        total_points=assignment.total_points,
+        status=assignment.status,
+        validation_profile=assignment.validation_profile,
+        required_file_types=assignment.required_file_types,
+        optional_file_types=assignment.optional_file_types,
+        validation_settings=assignment.validation_settings,
+        interpretation_prompts=assignment.interpretation_prompts,
+        criteria=[RubricCriterionOut.model_validate(c) for c in criteria],
+    )
+
+
+def _apply_assignment_payload(assignment: Assignment, payload: AssignmentManageIn) -> None:
+    assignment.title = payload.title.strip()
+    assignment.description = payload.description
+    assignment.assignment_type = payload.assignment_type or "lab"
+    assignment.due_date = payload.due_date
+    assignment.total_points = payload.total_points
+    assignment.status = payload.status
+    assignment.validation_profile = payload.validation_profile
+    assignment.required_file_types_json = json.dumps(payload.required_file_types)
+    assignment.optional_file_types_json = json.dumps(payload.optional_file_types)
+    assignment.validation_settings_json = json.dumps(payload.validation_settings)
+    assignment.interpretation_prompts_json = json.dumps(payload.interpretation_prompts)
+
+
+def _ensure_default_rubric(db: Session, assignment: Assignment) -> None:
+    rubric = assignment.rubric or db.query(Rubric).filter_by(assignment_id=assignment.id).first()
+    if not rubric:
+        rubric = Rubric(assignment_id=assignment.id, title=f"{assignment.title} Rubric")
+        db.add(rubric)
+        db.flush()
+    rubric.title = f"{assignment.title} Rubric"
+    if not rubric.criteria:
+        for order, (name, points, description) in enumerate(DEFAULT_CRITERIA, 1):
+            db.add(RubricCriterion(rubric_id=rubric.id, name=name, description=description, max_points=points, sort_order=order))
+
+
+def _upsert_roster_student(db: Session, payload: RosterStudentIn) -> tuple[User, bool]:
+    course = _default_course(db)
+    section = _section(db, course, payload.section)
+    email = payload.email.strip().lower()
+    user = db.query(User).filter_by(email=email).first()
+    created = False
+    if not user:
+        user = User(email=email, full_name=payload.full_name.strip(), role="student", hashed_password=hash_password(payload.password))
+        db.add(user)
+        db.flush()
+        created = True
+    else:
+        user.full_name = payload.full_name.strip()
+        user.role = "student"
+        if payload.password:
+            user.hashed_password = hash_password(payload.password)
+
+    enrollment = db.query(Enrollment).filter_by(course_id=course.id, user_id=user.id).first()
+    if not enrollment:
+        enrollment = Enrollment(course_id=course.id, user_id=user.id)
+        db.add(enrollment)
+    enrollment.section_id = section.id
+    enrollment.role = "student"
+    enrollment.status = "active"
+    return user, created
+
+
+def _roster_rows(db: Session) -> list[RosterStudentOut]:
+    assignments = db.query(Assignment).all()
+    total_assignments = len(assignments)
+    enrollments = (
+        db.query(Enrollment)
+        .join(User)
+        .filter(Enrollment.role == "student", Enrollment.status == "active")
+        .order_by(User.full_name)
+        .all()
+    )
+    rows: list[RosterStudentOut] = []
+    for enrollment in enrollments:
+        submissions = db.query(Submission).filter_by(user_id=enrollment.user_id).all()
+        rows.append(
+            RosterStudentOut(
+                student_id=enrollment.user_id,
+                full_name=enrollment.user.full_name,
+                email=enrollment.user.email,
+                section=enrollment.section.name if enrollment.section else "",
+                total_assignments=total_assignments,
+                submissions_count=len(submissions),
+                submitted_count=sum(1 for submission in submissions if submission.status == "submitted"),
+                graded_count=sum(1 for submission in submissions if submission.grade),
+                warning_count=sum(1 for submission in submissions if _latest_validation_status(submission) == "warning"),
+                missing_count=max(total_assignments - len({submission.assignment_id for submission in submissions}), 0),
+            )
+        )
+    return rows
+
+
 @router.get("/submissions", response_model=list[SubmissionOut])
 def list_all_submissions(
     db: Session = Depends(get_db),
     _: User = Depends(staff_user),
 ) -> list[Submission]:
     return db.query(Submission).order_by(Submission.updated_at.desc()).all()
+
+
+@router.get("/assignments", response_model=list[AssignmentOut])
+def manage_assignments(
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> list[AssignmentOut]:
+    return [_assignment_out(assignment) for assignment in db.query(Assignment).order_by(Assignment.id).all()]
+
+
+@router.post("/assignments", response_model=AssignmentOut)
+def create_assignment(
+    payload: AssignmentManageIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> AssignmentOut:
+    course = _default_course(db)
+    assignment = Assignment(course_id=course.id, title=payload.title, description=payload.description, assignment_type=payload.assignment_type)
+    _apply_assignment_payload(assignment, payload)
+    db.add(assignment)
+    db.flush()
+    _ensure_default_rubric(db, assignment)
+    db.commit()
+    db.refresh(assignment)
+    return _assignment_out(assignment)
+
+
+@router.patch("/assignments/{assignment_id}", response_model=AssignmentOut)
+def update_assignment(
+    assignment_id: int,
+    payload: AssignmentManageIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> AssignmentOut:
+    assignment = db.get(Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    _apply_assignment_payload(assignment, payload)
+    _ensure_default_rubric(db, assignment)
+    db.commit()
+    db.refresh(assignment)
+    return _assignment_out(assignment)
 
 
 @router.get("/analytics", response_model=InstructorAnalyticsOut)
@@ -172,33 +352,50 @@ def roster(
     db: Session = Depends(get_db),
     _: User = Depends(staff_user),
 ) -> list[RosterStudentOut]:
-    assignments = db.query(Assignment).all()
-    total_assignments = len(assignments)
-    enrollments = (
-        db.query(Enrollment)
-        .join(User)
-        .filter(Enrollment.role == "student", Enrollment.status == "active")
-        .order_by(User.full_name)
-        .all()
-    )
-    rows: list[RosterStudentOut] = []
-    for enrollment in enrollments:
-        submissions = db.query(Submission).filter_by(user_id=enrollment.user_id).all()
-        rows.append(
-            RosterStudentOut(
-                student_id=enrollment.user_id,
-                full_name=enrollment.user.full_name,
-                email=enrollment.user.email,
-                section=enrollment.section.name if enrollment.section else "",
-                total_assignments=total_assignments,
-                submissions_count=len(submissions),
-                submitted_count=sum(1 for submission in submissions if submission.status == "submitted"),
-                graded_count=sum(1 for submission in submissions if submission.grade),
-                warning_count=sum(1 for submission in submissions if _latest_validation_status(submission) == "warning"),
-                missing_count=max(total_assignments - len({submission.assignment_id for submission in submissions}), 0),
-            )
-        )
-    return rows
+    return _roster_rows(db)
+
+
+@router.post("/roster/students", response_model=RosterStudentOut)
+def add_roster_student(
+    payload: RosterStudentIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> RosterStudentOut:
+    user, _ = _upsert_roster_student(db, payload)
+    db.commit()
+    return next(student for student in _roster_rows(db) if student.student_id == user.id)
+
+
+@router.post("/roster/import", response_model=RosterImportOut)
+def import_roster(
+    payload: RosterImportIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> RosterImportOut:
+    reader = csv.DictReader(StringIO(payload.csv_text.strip()))
+    created_count = 0
+    updated_count = 0
+    skipped_count = 0
+    errors: list[str] = []
+    required = {"email", "full_name"}
+    if not reader.fieldnames or not required <= {field.strip() for field in reader.fieldnames}:
+        raise HTTPException(status_code=400, detail="CSV must include email and full_name columns")
+
+    for line_number, row in enumerate(reader, 2):
+        email = (row.get("email") or "").strip()
+        full_name = (row.get("full_name") or "").strip()
+        section = (row.get("section") or payload.default_section).strip()
+        if not email or not full_name:
+            skipped_count += 1
+            errors.append(f"Line {line_number}: missing email or full_name")
+            continue
+        _, created = _upsert_roster_student(db, RosterStudentIn(email=email, full_name=full_name, section=section))
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+    db.commit()
+    return RosterImportOut(created_count=created_count, updated_count=updated_count, skipped_count=skipped_count, errors=errors)
 
 
 @router.post("/grades", response_model=GradeOut)

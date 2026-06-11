@@ -207,6 +207,15 @@ textarea {
   padding: 0.75rem;
 }
 
+.inline-success {
+  background: #e5f3ea;
+  border: 1px solid #b8dfc7;
+  border-radius: 6px;
+  color: var(--good);
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;

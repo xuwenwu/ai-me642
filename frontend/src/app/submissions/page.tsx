@@ -31,6 +31,7 @@ export default function SubmissionsPage() {
   const [fileType, setFileType] = useState('lammps_log');
   const [file, setFile] = useState<File | null>(null);
   const [interpretation, setInterpretation] = useState('');
+  const [interpretationMessage, setInterpretationMessage] = useState('');
 
   const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
   const selectedAssignment = useMemo(() => assignments.find((assignment) => assignment.id === selected?.assignment_id), [assignments, selected]);
@@ -53,6 +54,7 @@ export default function SubmissionsPage() {
 
   useEffect(() => {
     setInterpretation(selected?.student_interpretation || '');
+    setInterpretationMessage('');
   }, [selected?.id]);
 
   async function createSubmission(event: React.FormEvent) {
@@ -126,6 +128,7 @@ export default function SubmissionsPage() {
     if (!selected) return;
     setError('');
     setMessage('');
+    setInterpretationMessage('');
     try {
       await api<Submission>(`/submissions/${selected.id}/interpretation`, {
         method: 'PATCH',
@@ -133,6 +136,7 @@ export default function SubmissionsPage() {
       });
       await load();
       setMessage('Saved interpretation');
+      setInterpretationMessage('Interpretation saved. You can still revise it before submitting.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save interpretation');
     }
@@ -142,10 +146,12 @@ export default function SubmissionsPage() {
     if (!selected) return;
     setError('');
     setMessage('');
+    setInterpretationMessage('');
     try {
       await api<Submission>(`/submissions/${selected.id}/submit`, { method: 'POST' });
       await load();
       setMessage('Submission marked as submitted');
+      setInterpretationMessage('Assignment submitted. The dashboard and instructor view will now show this package as submitted.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit');
     }
@@ -270,10 +276,12 @@ export default function SubmissionsPage() {
               </div>
             ) : null}
             <textarea value={interpretation} onChange={(e) => setInterpretation(e.target.value)} />
+            {interpretationMessage ? <div className="inline-success" role="status">{interpretationMessage}</div> : null}
+            {selected.status === 'submitted' ? <div className="inline-success" role="status">This assignment is submitted.</div> : null}
             <div className="row" style={{ marginTop: '0.75rem' }}>
               <button onClick={saveInterpretation}>Save interpretation</button>
               <button className="secondary" onClick={() => download(`/submissions/${selected.id}/package`, `submission_${selected.id}_package.zip`)}>Download ZIP</button>
-              <button onClick={submitAssignment}>Submit assignment</button>
+              <button onClick={submitAssignment} disabled={selected.status === 'submitted'}>{selected.status === 'submitted' ? 'Submitted' : 'Submit assignment'}</button>
             </div>
           </section>
         </>

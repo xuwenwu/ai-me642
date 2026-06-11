@@ -77,6 +77,17 @@ $env:PYTHONPATH="."
 pytest
 ```
 
+## Reset Local Demo Data
+
+Use this only for local development when you want a clean seeded database and empty upload/generated folders:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\reset_demo_data.py
+```
+
+The reset script refuses non-SQLite databases and only removes local ignored data under `backend/`.
+
 ## Smoke Test
 
 Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before commits or larger changes.

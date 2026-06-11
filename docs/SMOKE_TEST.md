@@ -33,7 +33,12 @@ Open `http://127.0.0.1:3000/login`.
 
 ## Student Workflow
 
-This checklist is easiest against a fresh local database. If this student already has a Lab 3 submission, reuse the existing submission or reset the local SQLite database before repeating the create-submission step.
+This checklist is easiest against a fresh local database. If this student already has a Lab 3 submission, reuse the existing submission or run the local reset script before repeating the create-submission step:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\reset_demo_data.py
+```
 
 Log in with:
 

@@ -2,6 +2,13 @@
 
 Use this checklist after setup, after major changes, or before making a commit. It verifies the Phase I-plus evidence chain without requiring external services.
 
+The automated API version of this workflow is `backend/app/tests/test_workflow_smoke.py`. Run it with:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest app\tests\test_workflow_smoke.py
+```
+
 ## Start The App
 
 Run these commands from the repository root in two separate terminals.

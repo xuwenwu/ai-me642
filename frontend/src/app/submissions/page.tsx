@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
-import { api, download } from '@/lib/api';
+import { ApiError, api, download } from '@/lib/api';
 import type { Assignment, FileArtifact, ProjectSpec, Submission, ValidationReport } from '@/lib/types';
 
 const fileTypes = [
@@ -37,6 +37,7 @@ export default function SubmissionsPage() {
     setProjects(p);
     setSubmissions(s);
     if (!selectedId && s[0]) setSelectedId(s[0].id);
+    return s;
   }
 
   useEffect(() => {
@@ -51,11 +52,18 @@ export default function SubmissionsPage() {
     event.preventDefault();
     setError('');
     setMessage('');
+    const assignmentId = Number(createForm.assignment_id);
+    const existing = submissions.find((submission) => submission.assignment_id === assignmentId);
+    if (existing) {
+      setSelectedId(existing.id);
+      setMessage(`Submission #${existing.id} already exists for this assignment. Continue with the selected submission below.`);
+      return;
+    }
     try {
       const created = await api<Submission>('/submissions', {
         method: 'POST',
         body: JSON.stringify({
-          assignment_id: Number(createForm.assignment_id),
+          assignment_id: assignmentId,
           project_id: createForm.project_id ? Number(createForm.project_id) : null,
           title: createForm.title,
         }),
@@ -64,6 +72,15 @@ export default function SubmissionsPage() {
       setSelectedId(created.id);
       setMessage(`Created submission #${created.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const latest = await load();
+        const match = latest.find((submission) => submission.assignment_id === assignmentId);
+        if (match) {
+          setSelectedId(match.id);
+          setMessage(`Submission #${match.id} already exists for this assignment. Continue with the selected submission below.`);
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : 'Failed to create submission');
     }
   }
@@ -216,4 +233,3 @@ export default function SubmissionsPage() {
     </AppShell>
   );
 }
-

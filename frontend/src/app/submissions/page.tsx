@@ -28,6 +28,8 @@ export default function SubmissionsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [createMessage, setCreateMessage] = useState('');
+  const [isCreatingSubmission, setIsCreatingSubmission] = useState(false);
   const [createForm, setCreateForm] = useState({ assignment_id: '', project_id: '', title: '' });
   const [fileType, setFileType] = useState('lammps_log');
   const [file, setFile] = useState<File | null>(null);
@@ -37,6 +39,10 @@ export default function SubmissionsPage() {
   const selected = useMemo(() => submissions.find((submission) => submission.id === selectedId) || submissions[0], [submissions, selectedId]);
   const selectedAssignment = useMemo(() => assignments.find((assignment) => assignment.id === selected?.assignment_id), [assignments, selected]);
   const draftAssignment = useMemo(() => assignments.find((assignment) => assignment.id === Number(createForm.assignment_id)), [assignments, createForm.assignment_id]);
+  const existingDraftSubmission = useMemo(
+    () => submissions.find((submission) => submission.assignment_id === Number(createForm.assignment_id)),
+    [submissions, createForm.assignment_id],
+  );
   const latestReport = selected?.validation_reports[0];
   const aiDisclosureCheck = latestReport?.checks.find((check) => check.check_type === 'ai_disclosure');
   const aiDisclosureNote = latestReport?.interpretation_notes.find((note) => note.topic === 'AI disclosure');
@@ -64,36 +70,55 @@ export default function SubmissionsPage() {
     event.preventDefault();
     setError('');
     setMessage('');
+    setCreateMessage('');
     const assignmentId = Number(createForm.assignment_id);
+    const assignment = assignments.find((item) => item.id === assignmentId);
+    if (!assignment) {
+      setCreateMessage('Choose an assignment before creating a submission.');
+      return;
+    }
     const existing = submissions.find((submission) => submission.assignment_id === assignmentId);
     if (existing) {
       setSelectedId(existing.id);
-      setMessage(`Submission #${existing.id} already exists for this assignment. Continue with the selected submission below.`);
+      const nextMessage = `Submission #${existing.id} already exists for this assignment and is now selected below.`;
+      setMessage(nextMessage);
+      setCreateMessage(nextMessage);
       return;
     }
+    setIsCreatingSubmission(true);
     try {
+      const title = createForm.title.trim() || `${assignment.title} package`;
       const created = await api<Submission>('/submissions', {
         method: 'POST',
         body: JSON.stringify({
           assignment_id: assignmentId,
           project_id: createForm.project_id ? Number(createForm.project_id) : null,
-          title: createForm.title,
+          title,
         }),
       });
       await load();
       setSelectedId(created.id);
-      setMessage(`Created submission #${created.id}`);
+      const nextMessage = `Created submission #${created.id}. It is now selected below.`;
+      setMessage(nextMessage);
+      setCreateMessage(nextMessage);
+      setCreateForm({ ...createForm, title });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         const latest = await load();
         const match = latest.find((submission) => submission.assignment_id === assignmentId);
         if (match) {
           setSelectedId(match.id);
-          setMessage(`Submission #${match.id} already exists for this assignment. Continue with the selected submission below.`);
+          const nextMessage = `Submission #${match.id} already exists for this assignment and is now selected below.`;
+          setMessage(nextMessage);
+          setCreateMessage(nextMessage);
           return;
         }
       }
-      setError(err instanceof Error ? err.message : 'Failed to create submission');
+      const nextError = err instanceof Error ? err.message : 'Failed to create submission';
+      setError(nextError);
+      setCreateMessage(nextError);
+    } finally {
+      setIsCreatingSubmission(false);
     }
   }
 
@@ -171,11 +196,14 @@ export default function SubmissionsPage() {
           <form className="form" onSubmit={createSubmission}>
             <label>Assignment<select value={createForm.assignment_id} onChange={(e) => {
               const nextAssignment = assignments.find((assignment) => assignment.id === Number(e.target.value));
+              const currentAssignment = assignments.find((assignment) => assignment.id === Number(createForm.assignment_id));
+              const currentAutoTitle = currentAssignment ? `${currentAssignment.title} package` : '';
               setCreateForm({
                 ...createForm,
                 assignment_id: e.target.value,
-                title: createForm.title || (nextAssignment ? `${nextAssignment.title} package` : ''),
+                title: !createForm.title || createForm.title === currentAutoTitle ? (nextAssignment ? `${nextAssignment.title} package` : '') : createForm.title,
               });
+              setCreateMessage('');
             }} required>
               <option value="">Select assignment</option>
               {assignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.title}</option>)}
@@ -185,6 +213,7 @@ export default function SubmissionsPage() {
                 <strong>{draftAssignment.validation_profile}</strong>
                 <p>{draftAssignment.description}</p>
                 <p className="muted">Due: {draftAssignment.due_date || 'not set'} - {draftAssignment.total_points} pts</p>
+                {existingDraftSubmission ? <p className="muted">Existing submission #{existingDraftSubmission.id} will be selected instead of creating a duplicate.</p> : null}
               </div>
             ) : null}
             <label>Project<select value={createForm.project_id} onChange={(e) => setCreateForm({ ...createForm, project_id: e.target.value })}>
@@ -192,7 +221,10 @@ export default function SubmissionsPage() {
               {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
             </select></label>
             <label>Title<input value={createForm.title} onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })} /></label>
-            <button>Create submission</button>
+            {createMessage ? <div className={createMessage.includes('Failed') || createMessage.includes('Choose') ? 'error' : 'inline-success'} role="status">{createMessage}</div> : null}
+            <button disabled={!createForm.assignment_id || isCreatingSubmission}>
+              {isCreatingSubmission ? 'Creating...' : existingDraftSubmission ? 'Open existing submission' : 'Create submission'}
+            </button>
           </form>
         </section>
         <section className="card">

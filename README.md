@@ -50,20 +50,23 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python seed.py
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-The backend serves `http://localhost:8000/api`.
+The backend serves `http://127.0.0.1:8000/api`.
 
 ## Frontend
 
 ```powershell
 cd frontend
 npm install
-npm run dev
+$env:NEXT_PUBLIC_API_URL="http://127.0.0.1:8000/api"
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-The frontend serves `http://localhost:3000`.
+The frontend serves `http://127.0.0.1:3000`.
+
+Using `127.0.0.1` for both services avoids local IPv4/IPv6 `localhost` resolution mismatches during development.
 
 ## Tests
 
@@ -74,7 +77,10 @@ $env:PYTHONPATH="."
 pytest
 ```
 
+## Smoke Test
+
+Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before commits or larger changes.
+
 ## Design Principle
 
 AI assistance is allowed only when it leaves an inspectable trail. Simulation results are accepted only when paired with reproducible artifacts and scientific interpretation. Instructors and TAs remain responsible for final judgment.
-

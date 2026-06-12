@@ -283,6 +283,23 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert roster_import.status_code == 200
             assert roster_import.json()["created_count"] == 1
 
+            roster_alias_import = client.post(
+                "/api/instructor/roster/import",
+                headers=instructor_headers,
+                json={
+                    "csv_text": "name,login_id,section\nAlias Student,student5@example.edu,Pilot Section C\nBad Email,not-an-email,Pilot Section C\n",
+                    "default_section": "Pilot Section A",
+                },
+            )
+            assert roster_alias_import.status_code == 200
+            assert roster_alias_import.json()["created_count"] == 1
+            assert roster_alias_import.json()["skipped_count"] == 1
+
+            roster_export = client.get("/api/instructor/roster.csv", headers=instructor_headers)
+            assert roster_export.status_code == 200
+            assert "sis_user_id" in roster_export.text
+            assert "student5@example.edu" in roster_export.text
+
             criteria = assignment["criteria"]
             grade = client.post(
                 "/api/instructor/grades",
@@ -333,7 +350,15 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             canvas_gradebook = client.get("/api/instructor/canvas-gradebook.csv", headers=instructor_headers)
             assert canvas_gradebook.status_code == 200
             assert "SIS User ID" in canvas_gradebook.text
-            assert "Lab 3: NVE Energy Conservation and Timestep Stability" in canvas_gradebook.text
+            assert "SIS Login ID" in canvas_gradebook.text
+            assert "Lab 3: NVE Energy Conservation and Timestep Stability (100)" in canvas_gradebook.text
+            assert "Automated smoke-test grade." not in canvas_gradebook.text
+
+            lms_detail = client.get(f"/api/instructor/lms-submission-detail.csv?assignment_id={assignment_id}", headers=instructor_headers)
+            assert lms_detail.status_code == 200
+            assert "Submission Status" in lms_detail.text
+            assert "Validation Status" in lms_detail.text
+            assert "Automated smoke-test grade." in lms_detail.text
     finally:
         app.dependency_overrides.pop(get_db, None)
         settings.upload_root = original_upload_root

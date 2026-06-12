@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { fileTypeLabels } from '@/components/ValidationSummary';
-import { api } from '@/lib/api';
+import { api, download } from '@/lib/api';
 import type { AIPolicy, AIPolicyInput, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
 
 const fileTypes = ['lammps_input', 'lammps_log', 'readme', 'prompt_log', 'python_analysis', 'ovito_script', 'slurm_script', 'figure', 'data', 'other'];
@@ -298,6 +298,9 @@ export default function InstructorSetupPage() {
 
         <section className="card">
           <h2>Roster Setup</h2>
+          <div className="row" style={{ marginBottom: '0.85rem' }}>
+            <button className="secondary" type="button" onClick={() => download('/instructor/roster.csv', 'roster_export.csv')}>Download roster CSV</button>
+          </div>
           <form className="form" onSubmit={addStudent}>
             <label>Full name<input value={studentForm.full_name} onChange={(e) => setStudentForm({ ...studentForm, full_name: e.target.value })} required /></label>
             <label>Email<input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} required /></label>

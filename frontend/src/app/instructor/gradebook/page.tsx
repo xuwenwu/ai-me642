@@ -50,7 +50,8 @@ export default function InstructorGradebookPage() {
         </div>
         <div className="row" style={{ marginTop: '0.85rem' }}>
           <button className="secondary" onClick={() => download(`/instructor/course-gradebook.csv${query}`, 'course_gradebook.csv')}>Download course CSV</button>
-          <button className="secondary" onClick={() => download(`/instructor/canvas-gradebook.csv${query}`, 'canvas_gradebook.csv')}>Download Canvas CSV</button>
+          <button className="secondary" onClick={() => download(`/instructor/canvas-gradebook.csv${query}`, 'canvas_gradebook_import.csv')}>Download Canvas import CSV</button>
+          <button className="secondary" onClick={() => download(`/instructor/lms-submission-detail.csv${query}`, 'lms_submission_detail.csv')}>Download LMS detail CSV</button>
         </div>
       </section>
 

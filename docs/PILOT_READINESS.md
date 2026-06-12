@@ -29,7 +29,7 @@ Use this checklist when reviewing the app for a small real-class pilot.
 5. Confirm seeded assignments are editable and roster rows are visible.
 6. Confirm the AI policy and prompt templates can be edited.
 7. Create or edit a test assignment, then confirm it appears in the student assignment list if its status is `published`.
-8. Add one test student or import a small CSV with `full_name,email,section`.
+8. Add one test student, import a small CSV with `full_name,email,section`, and download `roster_export.csv`.
 9. Open Instructor Review.
 10. Use the assignment, submission status, validation status, grade state, and search filters.
 11. Select the submitted Lab 3 package.
@@ -39,7 +39,8 @@ Use this checklist when reviewing the app for a small real-class pilot.
 15. Open Gradebook Dashboard.
 16. Confirm course totals, assignment operations, and student gradebook rows appear.
 17. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
-18. Download `canvas_gradebook.csv` and confirm it includes student, section, assignment, score, status, and feedback fields.
+18. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
+19. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
 
 ## Backend Checks
 
@@ -78,4 +79,4 @@ npm run build
 - AI-disclosure analytics flag missing or thin evidence but do not score students automatically.
 - Phase VI validation statically inspects uploaded scripts; it does not execute LAMMPS, Python, OVITO, or Slurm.
 - Canvas export is a CSV handoff, not a live Canvas API integration.
-- Live deployment hardening remains future work.
+- Production deployment still requires instructor-controlled hosting, HTTPS, backups, and real course secrets.

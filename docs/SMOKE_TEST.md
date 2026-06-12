@@ -169,13 +169,15 @@ Review course operations:
 - Open Gradebook Dashboard from Instructor Overview.
 - Confirm totals, assignment operations, and student rows appear.
 - Download the course CSV.
-- Download the Canvas CSV.
+- Download the Canvas import CSV.
+- Download the LMS detail CSV.
 
 Expected:
 
 - The gradebook dashboard includes missing/submitted/graded counts.
 - The course CSV includes one row per student with assignment status and score columns.
-- The Canvas CSV includes Student, SIS User ID, Section, Assignment, Points Possible, Score, Submission Status, Validation Status, Submitted At, and Feedback columns.
+- The Canvas import CSV includes Student, SIS User ID, SIS Login ID, Section, and one score column per assignment.
+- The LMS detail CSV includes Student, SIS User ID, Section, Assignment, Points Possible, Score, Submission Status, Validation Status, Submitted At, and Feedback columns.
 
 ## Notes
 

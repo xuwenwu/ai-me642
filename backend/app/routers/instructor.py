@@ -2,6 +2,7 @@ from __future__ import annotations
 import csv
 import json
 from io import StringIO
+from collections.abc import Mapping
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -44,6 +45,12 @@ DEFAULT_CRITERIA = [
     ("Interpretation and communication", 20, "Student explains findings, limitations, and uncertainty clearly."),
     ("Reproducibility and AI disclosure", 15, "Artifacts, README, prompt logs, manual edits, and concerns are documented."),
 ]
+
+ROSTER_FIELD_ALIASES = {
+    "full_name": ("full_name", "name", "student", "student_name", "student name"),
+    "email": ("email", "student_email", "student email", "login_id", "login id", "sis login id"),
+    "section": ("section", "section_name", "section name"),
+}
 
 
 def _latest_validation_status(submission: Submission) -> str:
@@ -179,6 +186,29 @@ def _gradebook_cell(submission: Submission | None, assignment: Assignment) -> Gr
     )
 
 
+def _csv_response(contents: str, filename: str) -> Response:
+    return Response(
+        contents,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _format_points(value: float) -> str:
+    return f"{value:g}"
+
+
+def _assignment_canvas_column(assignment: GradebookAssignmentSummaryOut) -> str:
+    return f"{assignment.title} ({_format_points(assignment.total_points)})"
+
+
+def _cell_feedback(db: Session, cell: GradebookCellOut) -> str:
+    if not cell.submission_id:
+        return ""
+    submission = db.get(Submission, cell.submission_id)
+    return submission.grade.feedback if submission and submission.grade else ""
+
+
 def _gradebook(db: Session, assignment_id: int | None = None) -> GradebookOut:
     assignments = _filtered_assignments(db, assignment_id)
     enrollments = _active_student_enrollments(db)
@@ -248,6 +278,22 @@ def _gradebook(db: Session, assignment_id: int | None = None) -> GradebookOut:
         assignments=assignment_rows,
         students=student_rows,
     )
+
+
+def _normalized_csv_row(row: Mapping[str, str | None]) -> dict[str, str]:
+    return {key.strip().lower().replace("_", " "): (value or "").strip() for key, value in row.items() if key}
+
+
+def _csv_value(row: Mapping[str, str], aliases: tuple[str, ...]) -> str:
+    for alias in aliases:
+        value = row.get(alias.replace("_", " "))
+        if value:
+            return value
+    return ""
+
+
+def _valid_email(value: str) -> bool:
+    return "@" in value and "." in value.rsplit("@", 1)[-1]
 
 
 def _default_course(db: Session) -> Course:
@@ -666,17 +712,24 @@ def import_roster(
     updated_count = 0
     skipped_count = 0
     errors: list[str] = []
-    required = {"email", "full_name"}
-    if not reader.fieldnames or not required <= {field.strip() for field in reader.fieldnames}:
-        raise HTTPException(status_code=400, detail="CSV must include email and full_name columns")
+    normalized_fields = {field.strip().lower().replace("_", " ") for field in reader.fieldnames or []}
+    has_name = any(alias.replace("_", " ") in normalized_fields for alias in ROSTER_FIELD_ALIASES["full_name"])
+    has_email = any(alias.replace("_", " ") in normalized_fields for alias in ROSTER_FIELD_ALIASES["email"])
+    if not reader.fieldnames or not (has_name and has_email):
+        raise HTTPException(status_code=400, detail="CSV must include full_name/name and email/login_id columns")
 
     for line_number, row in enumerate(reader, 2):
-        email = (row.get("email") or "").strip()
-        full_name = (row.get("full_name") or "").strip()
-        section = (row.get("section") or payload.default_section).strip()
+        normalized = _normalized_csv_row(row)
+        email = _csv_value(normalized, ROSTER_FIELD_ALIASES["email"]).lower()
+        full_name = _csv_value(normalized, ROSTER_FIELD_ALIASES["full_name"])
+        section = _csv_value(normalized, ROSTER_FIELD_ALIASES["section"]) or payload.default_section
         if not email or not full_name:
             skipped_count += 1
             errors.append(f"Line {line_number}: missing email or full_name")
+            continue
+        if not _valid_email(email):
+            skipped_count += 1
+            errors.append(f"Line {line_number}: invalid email/login_id")
             continue
         _, created = _upsert_roster_student(db, RosterStudentIn(email=email, full_name=full_name, section=section))
         if created:
@@ -685,6 +738,31 @@ def import_roster(
             updated_count += 1
     db.commit()
     return RosterImportOut(created_count=created_count, updated_count=updated_count, skipped_count=skipped_count, errors=errors)
+
+
+@router.get("/roster.csv")
+def roster_csv(
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> Response:
+    rows = _roster_rows(db)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["full_name", "email", "sis_user_id", "section", "submitted_count", "graded_count", "missing_count", "warning_count"])
+    for student in rows:
+        writer.writerow(
+            [
+                student.full_name,
+                student.email,
+                student.email,
+                student.section,
+                student.submitted_count,
+                student.graded_count,
+                student.missing_count,
+                student.warning_count,
+            ]
+        )
+    return _csv_response(buffer.getvalue(), "roster_export.csv")
 
 
 @router.post("/grades", response_model=GradeOut)
@@ -761,11 +839,7 @@ def course_gradebook_csv(
         for cell in student.assignments:
             row.extend([cell.submission_status, cell.validation_status, cell.final_score if cell.final_score is not None else ""])
         writer.writerow(row)
-    return Response(
-        buffer.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="course_gradebook.csv"'},
-    )
+    return _csv_response(buffer.getvalue(), "course_gradebook.csv")
 
 
 @router.get("/canvas-gradebook.csv")
@@ -777,11 +851,35 @@ def canvas_gradebook_csv(
     gradebook_data = _gradebook(db, assignment_id)
     buffer = StringIO()
     writer = csv.writer(buffer)
+    writer.writerow(["Student", "ID", "SIS User ID", "SIS Login ID", "Section", *[_assignment_canvas_column(assignment) for assignment in gradebook_data.assignments]])
+    for student in gradebook_data.students:
+        writer.writerow(
+            [
+                student.full_name,
+                "",
+                student.email,
+                student.email,
+                student.section,
+                *[cell.final_score if cell.final_score is not None else "" for cell in student.assignments],
+            ]
+        )
+    return _csv_response(buffer.getvalue(), "canvas_gradebook_import.csv")
+
+
+@router.get("/lms-submission-detail.csv")
+def lms_submission_detail_csv(
+    assignment_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> Response:
+    gradebook_data = _gradebook(db, assignment_id)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
     writer.writerow(
         [
             "Student",
-            "ID",
             "SIS User ID",
+            "SIS Login ID",
             "Section",
             "Assignment",
             "Points Possible",
@@ -794,10 +892,6 @@ def canvas_gradebook_csv(
     )
     for student in gradebook_data.students:
         for cell in student.assignments:
-            feedback = ""
-            if cell.submission_id:
-                submission = db.get(Submission, cell.submission_id)
-                feedback = submission.grade.feedback if submission and submission.grade else ""
             writer.writerow(
                 [
                     student.full_name,
@@ -810,14 +904,10 @@ def canvas_gradebook_csv(
                     cell.submission_status,
                     cell.validation_status,
                     cell.submitted_at.isoformat() if cell.submitted_at else "",
-                    feedback,
+                    _cell_feedback(db, cell),
                 ]
             )
-    return Response(
-        buffer.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="canvas_gradebook.csv"'},
-    )
+    return _csv_response(buffer.getvalue(), "lms_submission_detail.csv")
 
 
 @router.get("/gradebook.csv")
@@ -864,8 +954,4 @@ def gradebook_csv(
                 grade.final_score if grade else "",
             ]
         )
-    return Response(
-        buffer.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="gradebook.csv"'},
-    )
+    return _csv_response(buffer.getvalue(), "gradebook.csv")

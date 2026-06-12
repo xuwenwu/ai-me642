@@ -26,7 +26,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - Instructor/TA course setup, responsible-AI policy/template editing, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
 - AI-disclosure quality indicators for missing or thin prompt evidence.
 - Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
-- CSV gradebook export, filter-aware queue export, and Canvas/LMS-style CSV handoff.
+- CSV gradebook export, filter-aware queue export, Canvas import CSV, LMS detail CSV, and roster CSV export.
 - GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
 - Production environment guardrails, security headers, deployment docs, and local backup helper.
 - Reproducible ZIP package export.

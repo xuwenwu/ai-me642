@@ -76,9 +76,11 @@
 
 ## Phase IX: LMS / Canvas Handoff
 
-- Refined Canvas export formats.
-- Assignment-specific LMS handoff.
-- Roster import/export refinements.
+- Canvas-import-style wide gradebook CSV with one row per student and assignment score columns.
+- Assignment-filtered Canvas and LMS exports.
+- Detailed LMS handoff CSV with submission status, validation status, timestamps, and feedback.
+- Roster CSV export.
+- Roster import aliases for common Canvas-style column names.
 
 ## Phase X: Controlled AI Integration
 

@@ -69,6 +69,10 @@ export type PromptLog = {
   manual_edits: string;
   validation_performed: string;
   remaining_concerns: string;
+  provider_status: string;
+  provider_model: string;
+  provider_response_id: string;
+  privacy_flags: string[];
   created_at: string;
 };
 
@@ -79,6 +83,11 @@ export type AIPolicy = {
   body: string;
   allowed_tools: string[];
   disclosure_requirements: string[];
+  assistant_enabled: boolean;
+  assistant_provider: string;
+  assistant_model: string;
+  assistant_system_prompt: string;
+  assistant_retention_days: number;
   updated_at: string;
 };
 
@@ -87,6 +96,11 @@ export type AIPolicyInput = {
   body: string;
   allowed_tools: string[];
   disclosure_requirements: string[];
+  assistant_enabled: boolean;
+  assistant_provider: string;
+  assistant_model: string;
+  assistant_system_prompt: string;
+  assistant_retention_days: number;
 };
 
 export type PromptTemplate = {

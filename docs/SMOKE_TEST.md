@@ -72,6 +72,7 @@ Create an AI prompt log:
 Expected:
 
 - The new prompt log appears under Recorded Logs.
+- Course assistant generation is unavailable unless the instructor has enabled it.
 
 Create a submission:
 
@@ -155,6 +156,19 @@ Open Instructor Review:
 Expected:
 
 - A Grade saved message appears.
+
+Review controlled AI:
+
+- Open Course Setup.
+- Enable the Course Assistant with `offline` provider.
+- Log out and return to Prompt Logs as the student.
+- Enter prompt text and click Generate logged guidance.
+
+Expected:
+
+- A generated prompt log appears.
+- The log shows provider metadata as offline course guidance.
+- Any privacy flags are visible in the success message.
 
 Download gradebook:
 

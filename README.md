@@ -8,7 +8,7 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, roster setup, instructor analytics, grading, gradebook exports, CI, and deployment guardrails.
+The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, controlled AI assistant logging, roster setup, instructor analytics, grading, gradebook exports, CI, and deployment guardrails.
 
 ## What This MVP Does
 
@@ -16,6 +16,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - One ME642 course, three seeded demo lab assignments, and instructor assignment authoring.
 - Student project specification capture.
 - AI prompt-log disclosure with accepted/rejected/manual-edit fields, course policy guidance, and reusable prompt templates.
+- Optional instructor-controlled course assistant for logged AI guidance, disabled by default and testable in offline mode.
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
@@ -33,7 +34,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 
 ## What This MVP Does Not Do
 
-- It does not call a live LLM.
+- It does not call a live LLM unless instructor policy and server environment explicitly enable an external provider.
 - It does not run uploaded LAMMPS, Python, or shell code.
 - It does not execute uploaded OVITO scripts or Slurm jobs.
 - It does not submit HPC jobs.
@@ -150,6 +151,8 @@ Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before
 For pilot review, also use `docs/PILOT_READINESS.md`.
 
 For deployment and security hardening, use `docs/DEPLOYMENT.md` and `docs/SECURITY_CHECKLIST.md`.
+
+For controlled AI provider setup, use `docs/CONTROLLED_AI.md`.
 
 ## Design Principle
 

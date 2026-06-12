@@ -97,6 +97,14 @@ AI_POLICY = {
         "Describe manual edits and validation performed after AI assistance.",
         "State remaining concerns or uncertainties before submission.",
     ],
+    "assistant_enabled": False,
+    "assistant_provider": "offline",
+    "assistant_model": "",
+    "assistant_system_prompt": (
+        "You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and "
+        "interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims."
+    ),
+    "assistant_retention_days": 180,
 }
 
 PROMPT_TEMPLATES = [
@@ -190,6 +198,11 @@ def seed(db: Session) -> None:
     policy.body = AI_POLICY["body"]
     policy.allowed_tools_json = json.dumps(AI_POLICY["allowed_tools"])
     policy.disclosure_requirements_json = json.dumps(AI_POLICY["disclosure_requirements"])
+    policy.assistant_enabled = AI_POLICY["assistant_enabled"]
+    policy.assistant_provider = AI_POLICY["assistant_provider"]
+    policy.assistant_model = AI_POLICY["assistant_model"]
+    policy.assistant_system_prompt = AI_POLICY["assistant_system_prompt"]
+    policy.assistant_retention_days = AI_POLICY["assistant_retention_days"]
 
     for item in PROMPT_TEMPLATES:
         template = db.query(PromptTemplate).filter_by(course_id=course.id, title=item["title"]).first()

@@ -106,6 +106,10 @@ class PromptLogIn(BaseModel):
     manual_edits: str = ""
     validation_performed: str = ""
     remaining_concerns: str = ""
+    provider_status: str = "manual"
+    provider_model: str = ""
+    provider_response_id: str = ""
+    privacy_flags: list[str] = Field(default_factory=list)
 
 
 class PromptLogOut(PromptLogIn):
@@ -121,6 +125,11 @@ class AIPolicyIn(BaseModel):
     body: str = ""
     allowed_tools: list[str] = Field(default_factory=list)
     disclosure_requirements: list[str] = Field(default_factory=list)
+    assistant_enabled: bool = False
+    assistant_provider: str = "offline"
+    assistant_model: str = ""
+    assistant_system_prompt: str = ""
+    assistant_retention_days: int = 180
 
 
 class AIPolicyOut(AIPolicyIn):
@@ -142,6 +151,14 @@ class PromptTemplateOut(PromptTemplateIn):
     course_id: int
     created_at: datetime
     updated_at: datetime
+
+
+class AssistantPromptIn(BaseModel):
+    title: str = Field(min_length=1)
+    assignment_id: int | None = None
+    project_id: int | None = None
+    task_type: str = "lammps_debugging"
+    prompt_text: str = Field(min_length=1)
 
 
 class SubmissionCreate(BaseModel):

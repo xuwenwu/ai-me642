@@ -46,6 +46,11 @@ DEFAULT_CRITERIA = [
     ("Reproducibility and AI disclosure", 15, "Artifacts, README, prompt logs, manual edits, and concerns are documented."),
 ]
 
+DEFAULT_ASSISTANT_SYSTEM_PROMPT = (
+    "You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and "
+    "interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims."
+)
+
 ROSTER_FIELD_ALIASES = {
     "full_name": ("full_name", "name", "student", "student_name", "student name"),
     "email": ("email", "student_email", "student email", "login_id", "login id", "sis login id"),
@@ -342,6 +347,11 @@ def _policy_out(policy: AIPolicy) -> AIPolicyOut:
         body=policy.body,
         allowed_tools=policy.allowed_tools,
         disclosure_requirements=policy.disclosure_requirements,
+        assistant_enabled=policy.assistant_enabled,
+        assistant_provider=policy.assistant_provider,
+        assistant_model=policy.assistant_model,
+        assistant_system_prompt=policy.assistant_system_prompt,
+        assistant_retention_days=policy.assistant_retention_days,
         updated_at=policy.updated_at,
     )
 
@@ -388,6 +398,11 @@ def _apply_policy_payload(policy: AIPolicy, payload: AIPolicyIn) -> None:
     policy.body = payload.body
     policy.allowed_tools_json = json.dumps(payload.allowed_tools)
     policy.disclosure_requirements_json = json.dumps(payload.disclosure_requirements)
+    policy.assistant_enabled = payload.assistant_enabled
+    policy.assistant_provider = payload.assistant_provider.strip() or "offline"
+    policy.assistant_model = payload.assistant_model.strip()
+    policy.assistant_system_prompt = payload.assistant_system_prompt.strip() or DEFAULT_ASSISTANT_SYSTEM_PROMPT
+    policy.assistant_retention_days = max(payload.assistant_retention_days, 0)
 
 
 def _apply_template_payload(template: PromptTemplate, payload: PromptTemplateIn) -> None:

@@ -14,6 +14,7 @@ export default function PromptLogsPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
   const [form, setForm] = useState({
     title: 'AI assistance for NVE energy drift check',
     assignment_id: '',
@@ -65,6 +66,38 @@ export default function PromptLogsPage() {
       setMessage('Prompt log saved. It will be included in validation evidence and submission ZIP exports.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save prompt log');
+    }
+  }
+
+  async function generateAssistantLog() {
+    setError('');
+    setMessage('');
+    setIsGenerating(true);
+    try {
+      const log = await api<PromptLog>('/prompt-logs/assistant', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: form.title.trim() || 'Course assistant guidance',
+          assignment_id: form.assignment_id ? Number(form.assignment_id) : null,
+          project_id: form.project_id ? Number(form.project_id) : null,
+          task_type: form.task_type,
+          prompt_text: form.prompt_text,
+        }),
+      });
+      await load();
+      setForm({
+        ...form,
+        title: log.title,
+        ai_tool_name: log.ai_tool_name,
+        task_type: log.task_type,
+        ai_output_summary: log.ai_output_summary,
+      });
+      const flags = log.privacy_flags.length ? ` Privacy flags: ${log.privacy_flags.join(', ')}.` : '';
+      setMessage(`Course assistant guidance saved to prompt logs.${flags}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate course assistant guidance');
+    } finally {
+      setIsGenerating(false);
     }
   }
 
@@ -140,13 +173,25 @@ export default function PromptLogsPage() {
         <label>Manual edits<textarea value={form.manual_edits} onChange={(e) => setForm({ ...form, manual_edits: e.target.value })} /></label>
         <label>Validation performed<textarea value={form.validation_performed} onChange={(e) => setForm({ ...form, validation_performed: e.target.value })} /></label>
         <label>Remaining concerns<textarea value={form.remaining_concerns} onChange={(e) => setForm({ ...form, remaining_concerns: e.target.value })} /></label>
-        <button>Save prompt log</button>
+        <div className="row">
+          <button>Save prompt log</button>
+          {policy?.assistant_enabled ? (
+            <button className="secondary" type="button" onClick={generateAssistantLog} disabled={isGenerating || !form.prompt_text.trim()}>
+              {isGenerating ? 'Generating...' : 'Generate logged guidance'}
+            </button>
+          ) : null}
+        </div>
       </form>
 
       <section className="card" style={{ marginTop: '1rem' }}>
         <h2>Recorded Logs</h2>
         {logs.length ? (
-          logs.map((log) => <p key={log.id}><strong>{log.title}</strong> - {log.ai_tool_name} - {log.task_type}</p>)
+          logs.map((log) => (
+            <p key={log.id}>
+              <strong>{log.title}</strong> - {log.ai_tool_name} - {log.task_type}
+              {log.provider_status !== 'manual' ? <span className="muted"> - {log.provider_status}</span> : null}
+            </p>
+          ))
         ) : <p className="muted">No prompt logs recorded yet.</p>}
       </section>
     </AppShell>

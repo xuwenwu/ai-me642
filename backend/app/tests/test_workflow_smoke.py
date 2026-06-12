@@ -100,6 +100,20 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
                 },
             )
             assert prompt_log.status_code == 200
+            assert prompt_log.json()["provider_status"] == "manual"
+
+            disabled_assistant = client.post(
+                "/api/prompt-logs/assistant",
+                headers=student_headers,
+                json={
+                    "title": "Disabled assistant check",
+                    "assignment_id": assignment_id,
+                    "project_id": project_id,
+                    "task_type": "lammps_debugging",
+                    "prompt_text": "Help me plan validation checks for this NVE log.",
+                },
+            )
+            assert disabled_assistant.status_code == 403
 
             submission = client.post(
                 "/api/submissions",
@@ -241,10 +255,34 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
                     **policy_payload,
                     "body": policy_payload["body"] + " Smoke-test policy update.",
                     "allowed_tools": policy_payload["allowed_tools"] + ["ME642 Test Assistant"],
+                    "assistant_enabled": True,
+                    "assistant_provider": "offline",
+                    "assistant_model": "",
+                    "assistant_system_prompt": policy_payload["assistant_system_prompt"],
+                    "assistant_retention_days": 180,
                 },
             )
             assert edited_policy.status_code == 200
             assert "Smoke-test policy update" in edited_policy.json()["body"]
+            assert edited_policy.json()["assistant_enabled"] is True
+
+            assistant_log = client.post(
+                "/api/prompt-logs/assistant",
+                headers=student_headers,
+                json={
+                    "title": "Offline assistant guidance",
+                    "assignment_id": assignment_id,
+                    "project_id": project_id,
+                    "task_type": "lammps_debugging",
+                    "prompt_text": "Help me plan validation checks for student@example.edu and this NVE log.",
+                },
+            )
+            assert assistant_log.status_code == 200
+            assistant_body = assistant_log.json()
+            assert assistant_body["provider_status"] == "generated_offline"
+            assert assistant_body["provider_model"] == "offline_course_guidance"
+            assert "Course assistant guidance" in assistant_body["ai_output_summary"]
+            assert "possible email address" in assistant_body["privacy_flags"]
 
             managed_template = client.post(
                 "/api/instructor/prompt-templates",

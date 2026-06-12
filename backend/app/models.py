@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import UTC, datetime
 import json
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
@@ -69,6 +69,17 @@ class AIPolicy(Base):
     body: Mapped[str] = mapped_column(Text, default="")
     allowed_tools_json: Mapped[str] = mapped_column(Text, default="[]")
     disclosure_requirements_json: Mapped[str] = mapped_column(Text, default="[]")
+    assistant_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    assistant_provider: Mapped[str] = mapped_column(String(64), default="offline")
+    assistant_model: Mapped[str] = mapped_column(String(128), default="")
+    assistant_system_prompt: Mapped[str] = mapped_column(
+        Text,
+        default=(
+            "You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and "
+            "interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims."
+        ),
+    )
+    assistant_retention_days: Mapped[int] = mapped_column(Integer, default=180)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
 
     course = relationship("Course")
@@ -207,11 +218,19 @@ class PromptLogEntry(Base):
     manual_edits: Mapped[str] = mapped_column(Text, default="")
     validation_performed: Mapped[str] = mapped_column(Text, default="")
     remaining_concerns: Mapped[str] = mapped_column(Text, default="")
+    provider_status: Mapped[str] = mapped_column(String(64), default="manual")
+    provider_model: Mapped[str] = mapped_column(String(128), default="")
+    provider_response_id: Mapped[str] = mapped_column(String(255), default="")
+    privacy_flags_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     user = relationship("User")
     project = relationship("ProjectSpecification")
     assignment = relationship("Assignment")
+
+    @property
+    def privacy_flags(self) -> list[str]:
+        return _json_list(self.privacy_flags_json, [])
 
 
 class Submission(Base):

@@ -28,19 +28,20 @@ Use this checklist when reviewing the app for a small real-class pilot.
 4. Open Course Setup.
 5. Confirm seeded assignments are editable and roster rows are visible.
 6. Confirm the AI policy and prompt templates can be edited.
-7. Create or edit a test assignment, then confirm it appears in the student assignment list if its status is `published`.
-8. Add one test student, import a small CSV with `full_name,email,section`, and download `roster_export.csv`.
-9. Open Instructor Review.
-10. Use the assignment, submission status, validation status, grade state, and search filters.
-11. Select the submitted Lab 3 package.
-12. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
-13. Enter rubric scores and save a grade.
-14. Confirm the grade-save message appears beside the rubric form.
-15. Open Gradebook Dashboard.
-16. Confirm course totals, assignment operations, and student gradebook rows appear.
-17. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
-18. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
-19. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
+7. Confirm the Course Assistant is disabled by default, then enable offline mode for a test prompt if reviewing Phase X.
+8. Create or edit a test assignment, then confirm it appears in the student assignment list if its status is `published`.
+9. Add one test student, import a small CSV with `full_name,email,section`, and download `roster_export.csv`.
+10. Open Instructor Review.
+11. Use the assignment, submission status, validation status, grade state, and search filters.
+12. Select the submitted Lab 3 package.
+13. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
+14. Enter rubric scores and save a grade.
+15. Confirm the grade-save message appears beside the rubric form.
+16. Open Gradebook Dashboard.
+17. Confirm course totals, assignment operations, and student gradebook rows appear.
+18. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
+19. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
+20. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
 
 ## Backend Checks
 
@@ -75,8 +76,9 @@ npm run build
 
 - The app does not run uploaded simulation code.
 - Automated validation is advisory evidence, not a grade.
-- No live LLM calls are made.
+- No live LLM calls are made unless both instructor policy and server environment explicitly enable an external provider.
 - AI-disclosure analytics flag missing or thin evidence but do not score students automatically.
 - Phase VI validation statically inspects uploaded scripts; it does not execute LAMMPS, Python, OVITO, or Slurm.
 - Canvas export is a CSV handoff, not a live Canvas API integration.
 - Production deployment still requires instructor-controlled hosting, HTTPS, backups, and real course secrets.
+- Controlled AI external provider mode still requires institutional/privacy review and API billing ownership.

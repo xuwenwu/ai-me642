@@ -14,6 +14,7 @@ Required production choices:
 - `CORS_ORIGINS` set to the real frontend origin, not `*`.
 - `UPLOAD_ROOT` set to a backed-up server directory.
 - `DATABASE_URL` set to the production database.
+- `AI_PROVIDER_ENABLED=false` unless the course has approved external AI provider use.
 
 The backend refuses to start in production if the default development secret is still present, demo seeding is enabled, or wildcard CORS is configured.
 
@@ -71,6 +72,10 @@ cd backend
 Backups are written under `backend/data/backups/`, which is ignored by Git.
 
 For production databases other than SQLite, use the database provider's backup tool and separately back up `UPLOAD_ROOT`.
+
+## Controlled AI
+
+External AI calls are disabled by default. For a controlled pilot, start with offline course guidance. If enabling OpenAI provider mode, set `AI_PROVIDER_ENABLED=true`, `AI_PROVIDER_MODE=openai`, an approved `AI_PROVIDER_MODEL`, and a server-side `OPENAI_API_KEY`. Do not expose the key to the frontend.
 
 ## CI
 

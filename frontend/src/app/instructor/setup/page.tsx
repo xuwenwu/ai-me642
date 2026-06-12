@@ -29,6 +29,11 @@ const emptyPolicy: AIPolicyInput = {
   body: '',
   allowed_tools: [],
   disclosure_requirements: [],
+  assistant_enabled: false,
+  assistant_provider: 'offline',
+  assistant_model: '',
+  assistant_system_prompt: 'You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims.',
+  assistant_retention_days: 180,
 };
 
 const emptyTemplate: PromptTemplateInput = {
@@ -135,6 +140,11 @@ export default function InstructorSetupPage() {
       body: policy.body,
       allowed_tools: policy.allowed_tools,
       disclosure_requirements: policy.disclosure_requirements,
+      assistant_enabled: policy.assistant_enabled,
+      assistant_provider: policy.assistant_provider,
+      assistant_model: policy.assistant_model,
+      assistant_system_prompt: policy.assistant_system_prompt,
+      assistant_retention_days: policy.assistant_retention_days,
     } : emptyPolicy;
     setPolicyForm(next);
     setAllowedToolsText(next.allowed_tools.join('\n'));
@@ -183,6 +193,8 @@ export default function InstructorSetupPage() {
           title: policyForm.title.trim(),
           allowed_tools: linesToList(allowedToolsText),
           disclosure_requirements: linesToList(requirementsText),
+          assistant_model: policyForm.assistant_model.trim(),
+          assistant_system_prompt: policyForm.assistant_system_prompt.trim(),
         }),
       });
       setPolicy(saved);
@@ -330,6 +342,19 @@ export default function InstructorSetupPage() {
             <label>Policy body<textarea value={policyForm.body} onChange={(e) => setPolicyForm({ ...policyForm, body: e.target.value })} /></label>
             <label>Allowed tools<textarea value={allowedToolsText} onChange={(e) => setAllowedToolsText(e.target.value)} placeholder="One tool per line" /></label>
             <label>Disclosure requirements<textarea value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} placeholder="One requirement per line" /></label>
+            <fieldset className="check-panel">
+              <legend>Course Assistant</legend>
+              <label><input type="checkbox" checked={policyForm.assistant_enabled} onChange={(e) => setPolicyForm({ ...policyForm, assistant_enabled: e.target.checked })} /> Enabled</label>
+            </fieldset>
+            <div className="filter-grid">
+              <label>Provider<select value={policyForm.assistant_provider} onChange={(e) => setPolicyForm({ ...policyForm, assistant_provider: e.target.value })}>
+                <option value="offline">Offline course guidance</option>
+                <option value="openai">OpenAI</option>
+              </select></label>
+              <label>Model<input value={policyForm.assistant_model} onChange={(e) => setPolicyForm({ ...policyForm, assistant_model: e.target.value })} /></label>
+              <label>Retention days<input type="number" min="0" step="1" value={policyForm.assistant_retention_days} onChange={(e) => setPolicyForm({ ...policyForm, assistant_retention_days: Number(e.target.value) })} /></label>
+            </div>
+            <label>Assistant system prompt<textarea value={policyForm.assistant_system_prompt} onChange={(e) => setPolicyForm({ ...policyForm, assistant_system_prompt: e.target.value })} /></label>
             <button>Save AI policy</button>
           </form>
         </section>

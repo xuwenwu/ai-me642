@@ -84,6 +84,9 @@
 
 ## Phase X: Controlled AI Integration
 
-- Optional live provider interface.
-- Full prompt/output logging for provider calls.
-- Instructor-configured AI permissions, privacy, and retention.
+- Instructor-controlled course assistant switch in Course Setup.
+- Offline course-guidance provider for safe pilot testing without external calls.
+- Optional OpenAI provider path gated by instructor policy and server environment.
+- Provider metadata, response id, model, and privacy flags on prompt logs.
+- Prompt privacy checks before external provider calls.
+- Controlled AI setup documentation.

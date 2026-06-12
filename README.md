@@ -8,7 +8,7 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, roster setup, instructor analytics, grading, and gradebook exports.
+The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, roster setup, instructor analytics, grading, gradebook exports, CI, and deployment guardrails.
 
 ## What This MVP Does
 
@@ -27,6 +27,8 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - AI-disclosure quality indicators for missing or thin prompt evidence.
 - Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
 - CSV gradebook export, filter-aware queue export, and Canvas/LMS-style CSV handoff.
+- GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
+- Production environment guardrails, security headers, deployment docs, and local backup helper.
 - Reproducible ZIP package export.
 
 ## What This MVP Does Not Do
@@ -146,6 +148,8 @@ The reset script refuses non-SQLite databases and only removes local ignored dat
 Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before commits or larger changes.
 
 For pilot review, also use `docs/PILOT_READINESS.md`.
+
+For deployment and security hardening, use `docs/DEPLOYMENT.md` and `docs/SECURITY_CHECKLIST.md`.
 
 ## Design Principle
 

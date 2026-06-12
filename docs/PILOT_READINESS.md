@@ -49,6 +49,19 @@ cd backend
 .\.venv\Scripts\python.exe -m pytest
 ```
 
+## Deployment Checks
+
+1. Confirm `.github/workflows/ci.yml` exists.
+2. Confirm `.env.production.example` includes `APP_ENV=production`, `SEED_DEMO_DATA=false`, and non-wildcard `CORS_ORIGINS`.
+3. Read `docs/DEPLOYMENT.md`.
+4. Read `docs/SECURITY_CHECKLIST.md`.
+5. For a local backup dry run, use:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\backup_local_data.py
+```
+
 ## Frontend Checks
 
 ```powershell

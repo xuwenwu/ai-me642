@@ -1,5 +1,44 @@
 from fastapi.testclient import TestClient
+import pytest
+from app.config import Settings, validate_runtime_security
 from app.main import app
+
+
+def test_health_reports_environment_and_security_headers():
+    with TestClient(app) as client:
+        response = client.get("/api/health")
+        assert response.status_code == 200
+        assert response.json()["environment"] == "development"
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Referrer-Policy"] == "same-origin"
+
+
+def test_production_runtime_rejects_unsafe_defaults():
+    settings = Settings(app_env="production", secret_key="dev-secret-change-me", seed_demo_data=True)
+    with pytest.raises(RuntimeError, match="Production configuration is not safe"):
+        validate_runtime_security(settings)
+
+
+def test_production_runtime_rejects_placeholder_secret():
+    settings = Settings(
+        app_env="production",
+        secret_key="replace-with-at-least-32-random-characters",
+        seed_demo_data=False,
+        cors_origins_raw="https://course.example.edu",
+    )
+    with pytest.raises(RuntimeError, match="SECRET_KEY"):
+        validate_runtime_security(settings)
+
+
+def test_production_runtime_accepts_hardened_settings():
+    settings = Settings(
+        app_env="production",
+        secret_key="x" * 40,
+        seed_demo_data=False,
+        cors_origins_raw="https://course.example.edu",
+    )
+    validate_runtime_security(settings)
 
 
 def test_seeded_student_login_and_staff_guard():

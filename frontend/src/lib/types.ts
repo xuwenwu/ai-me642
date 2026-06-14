@@ -3,6 +3,8 @@ export type User = {
   email: string;
   full_name: string;
   role: 'student' | 'ta' | 'instructor';
+  is_active: boolean;
+  must_change_password: boolean;
 };
 
 export type Criterion = {
@@ -285,6 +287,9 @@ export type RosterStudent = {
   full_name: string;
   email: string;
   section: string;
+  is_active: boolean;
+  must_change_password: boolean;
+  account_status: string;
   total_assignments: number;
   submissions_count: number;
   submitted_count: number;

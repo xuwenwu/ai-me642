@@ -31,17 +31,28 @@ Use this checklist when reviewing the app for a small real-class pilot.
 7. Confirm the Course Assistant is disabled by default, then enable offline mode for a test prompt if reviewing Phase X.
 8. Create or edit a test assignment, then confirm it appears in the student assignment list if its status is `published`.
 9. Add one test student, import a small CSV with `full_name,email,section`, and download `roster_export.csv`.
-10. Open Instructor Review.
-11. Use the assignment, submission status, validation status, grade state, and search filters.
-12. Select the submitted Lab 3 package.
-13. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
-14. Enter rubric scores and save a grade.
-15. Confirm the grade-save message appears beside the rubric form.
-16. Open Gradebook Dashboard.
-17. Confirm course totals, assignment operations, and student gradebook rows appear.
-18. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
-19. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
-20. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
+10. Confirm roster account status appears, then reset a test student password and require a password change.
+11. Confirm deactivating a test student blocks login, then reactivate the account.
+12. Open Instructor Review.
+13. Use the assignment, submission status, validation status, grade state, and search filters.
+14. Select the submitted Lab 3 package.
+15. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
+16. Enter rubric scores and save a grade.
+17. Confirm the grade-save message appears beside the rubric form.
+18. Open Gradebook Dashboard.
+19. Confirm course totals, assignment operations, and student gradebook rows appear.
+20. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
+21. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
+22. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
+
+## Account Flow
+
+1. Create a test student with a temporary password and required password change.
+2. Sign in as the test student.
+3. Confirm the app redirects to Account / Change Password.
+4. Change the password.
+5. Confirm Dashboard and student workflows become available.
+6. Sign in with the old temporary password and confirm it no longer works.
 
 ## Backend Checks
 

@@ -95,8 +95,8 @@ export default function InstructorSetupPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('new');
   const [templateFormState, setTemplateFormState] = useState<PromptTemplateInput>(emptyTemplate);
   const [templateChecklistText, setTemplateChecklistText] = useState('');
-  const [studentForm, setStudentForm] = useState({ full_name: '', email: '', section: 'Pilot Section A', password: 'password123' });
-  const [csvText, setCsvText] = useState('full_name,email,section\n');
+  const [studentForm, setStudentForm] = useState({ full_name: '', email: '', section: 'Pilot Section A', password: 'temporary-pass-123', is_active: true, must_change_password: true });
+  const [csvText, setCsvText] = useState('full_name,email,section,password,must_change_password,is_active\n');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [importResult, setImportResult] = useState<RosterImportResult | null>(null);
@@ -232,7 +232,7 @@ export default function InstructorSetupPage() {
     try {
       const student = await api<RosterStudent>('/instructor/roster/students', { method: 'POST', body: JSON.stringify(studentForm) });
       await load();
-      setStudentForm({ full_name: '', email: '', section: student.section || 'Pilot Section A', password: 'password123' });
+      setStudentForm({ full_name: '', email: '', section: student.section || 'Pilot Section A', password: 'temporary-pass-123', is_active: true, must_change_password: true });
       setMessage(`Saved student: ${student.full_name}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save student');
@@ -254,6 +254,41 @@ export default function InstructorSetupPage() {
       setMessage(`Roster import complete: ${result.created_count} created, ${result.updated_count} updated.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import roster');
+    }
+  }
+
+  async function updateStudentAccount(student: RosterStudent, updates: { is_active?: boolean; must_change_password?: boolean }) {
+    setError('');
+    setMessage('');
+    try {
+      const saved = await api<RosterStudent>(`/instructor/roster/students/${student.student_id}/account`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          is_active: updates.is_active ?? student.is_active,
+          must_change_password: updates.must_change_password ?? student.must_change_password,
+        }),
+      });
+      await load();
+      setMessage(`Updated account: ${saved.full_name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update account');
+    }
+  }
+
+  async function resetPassword(student: RosterStudent) {
+    const newPassword = window.prompt(`Temporary password for ${student.email}`, 'temporary-pass-123');
+    if (!newPassword) return;
+    setError('');
+    setMessage('');
+    try {
+      const saved = await api<RosterStudent>(`/instructor/roster/students/${student.student_id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ new_password: newPassword, must_change_password: true }),
+      });
+      await load();
+      setMessage(`Reset password for ${saved.full_name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password');
     }
   }
 
@@ -318,6 +353,11 @@ export default function InstructorSetupPage() {
             <label>Email<input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} required /></label>
             <label>Section<input value={studentForm.section} onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })} /></label>
             <label>Initial password<input value={studentForm.password} onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })} /></label>
+            <fieldset className="check-panel">
+              <legend>Account</legend>
+              <label><input type="checkbox" checked={studentForm.is_active} onChange={(e) => setStudentForm({ ...studentForm, is_active: e.target.checked })} /> Active</label>
+              <label><input type="checkbox" checked={studentForm.must_change_password} onChange={(e) => setStudentForm({ ...studentForm, must_change_password: e.target.checked })} /> Require password change</label>
+            </fieldset>
             <button>Add or update student</button>
           </form>
           <form className="form" onSubmit={importRoster} style={{ marginTop: '1rem' }}>
@@ -385,17 +425,29 @@ export default function InstructorSetupPage() {
         <h2>Current Roster</h2>
         {roster.length ? (
           <table>
-            <thead><tr><th>Student</th><th>Section</th><th>Submissions</th><th>Submitted</th><th>Warnings</th><th>Graded</th><th>Missing</th></tr></thead>
+            <thead><tr><th>Student</th><th>Section</th><th>Account</th><th>Submissions</th><th>Submitted</th><th>Warnings</th><th>Graded</th><th>Missing</th><th>Actions</th></tr></thead>
             <tbody>
               {roster.map((student) => (
                 <tr key={student.student_id}>
                   <td>{student.full_name}<div className="muted">{student.email}</div></td>
                   <td>{student.section}</td>
+                  <td><span className={`status ${student.account_status === 'inactive' ? 'failed' : student.must_change_password ? 'warning' : 'passed'}`}>{student.account_status}</span></td>
                   <td>{student.submissions_count}/{student.total_assignments}</td>
                   <td>{student.submitted_count}</td>
                   <td>{student.warning_count}</td>
                   <td>{student.graded_count}</td>
                   <td>{student.missing_count}</td>
+                  <td>
+                    <div className="row">
+                      <button className="secondary" type="button" onClick={() => resetPassword(student)}>Reset password</button>
+                      <button className="secondary" type="button" onClick={() => updateStudentAccount(student, { must_change_password: !student.must_change_password })}>
+                        {student.must_change_password ? 'Clear required change' : 'Require change'}
+                      </button>
+                      <button className="secondary" type="button" onClick={() => updateStudentAccount(student, { is_active: !student.is_active })}>
+                        {student.is_active ? 'Deactivate' : 'Reactivate'}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -10,6 +10,8 @@ class UserOut(BaseModel):
     email: str
     full_name: str
     role: str
+    is_active: bool = True
+    must_change_password: bool = False
 
 
 class LoginIn(BaseModel):
@@ -21,6 +23,21 @@ class AuthOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=10)
+
+
+class ResetPasswordIn(BaseModel):
+    new_password: str = Field(min_length=10)
+    must_change_password: bool = True
+
+
+class AccountStatusIn(BaseModel):
+    is_active: bool
+    must_change_password: bool = False
 
 
 class RubricCriterionOut(BaseModel):
@@ -383,6 +400,9 @@ class RosterStudentOut(BaseModel):
     full_name: str
     email: str
     section: str
+    is_active: bool
+    must_change_password: bool
+    account_status: str
     total_assignments: int
     submissions_count: int
     submitted_count: int
@@ -396,6 +416,8 @@ class RosterStudentIn(BaseModel):
     email: str = Field(min_length=3)
     section: str = "Pilot Section A"
     password: str = "password123"
+    is_active: bool = True
+    must_change_password: bool = True
 
 
 class RosterImportIn(BaseModel):

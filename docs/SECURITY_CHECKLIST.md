@@ -15,6 +15,8 @@ Use this before exposing the app beyond a trusted local workstation.
 - Back up the database and `UPLOAD_ROOT`.
 - Confirm `backend/scripts/reset_demo_data.py` is only used on local SQLite demo data.
 - Confirm `/api/health/ready` reports database and upload storage readiness.
+- Require students to change temporary passwords before using the workspace.
+- Deactivate test accounts that should no longer access the pilot.
 - Run GitHub Actions or local checks before deploy.
 
 ## Current Guardrails
@@ -22,6 +24,8 @@ Use this before exposing the app beyond a trusted local workstation.
 - Uploaded scripts are statically inspected; they are not executed.
 - Role checks protect instructor/TA routes.
 - Students can access only their own submissions/projects.
+- Inactive accounts cannot log in.
+- Temporary-password accounts are blocked from app actions until the password is changed.
 - Production startup rejects unsafe demo defaults.
 - Readiness checks verify database connectivity and upload storage writeability.
 - Basic security headers are added to backend responses.

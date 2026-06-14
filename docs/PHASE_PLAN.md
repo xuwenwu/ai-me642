@@ -99,3 +99,12 @@
 - Backend readiness endpoint that verifies database access and upload storage writeability.
 - Pilot operations runbook for setup, health checks, backups, upgrades, rollback, incidents, and exit exports.
 - Documentation updates that distinguish temporary workstation tunnels from a stable course deployment.
+
+## Phase XII: Account and Password Management
+
+- User accounts include active/inactive status and a required password-change flag.
+- Login blocks inactive accounts and routes temporary-password users to password change.
+- Backend guards prevent app use until required password changes are completed.
+- Logged-in users can change their own password.
+- Instructors can reset student passwords, require/clear password changes, and deactivate/reactivate student accounts.
+- Roster import accepts optional password, active status, and force-password-change columns.

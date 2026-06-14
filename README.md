@@ -25,6 +25,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Student reflection cues tied to each assignment.
 - Instructor/TA course setup, responsible-AI policy/template editing, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
+- Account management with active/inactive status, required password changes, self-service password change, and instructor password reset.
 - AI-disclosure quality indicators for missing or thin prompt evidence.
 - Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
 - CSV gradebook export, filter-aware queue export, Canvas import CSV, LMS detail CSV, and roster CSV export.

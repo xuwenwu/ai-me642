@@ -2,6 +2,7 @@ from __future__ import annotations
 import csv
 import json
 from io import StringIO
+from datetime import UTC, datetime
 from collections.abc import Mapping
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -13,6 +14,7 @@ from ..models import AIPolicy, Assignment, Course, CriterionScore, Enrollment, G
 from ..schemas import (
     AIPolicyIn,
     AIPolicyOut,
+    AccountStatusIn,
     AssignmentManageIn,
     AssignmentAnalyticsOut,
     AssignmentOut,
@@ -26,6 +28,7 @@ from ..schemas import (
     NeedsAttentionOut,
     PromptTemplateIn,
     PromptTemplateOut,
+    ResetPasswordIn,
     RosterImportIn,
     RosterImportOut,
     RosterStudentIn,
@@ -55,6 +58,15 @@ ROSTER_FIELD_ALIASES = {
     "full_name": ("full_name", "name", "student", "student_name", "student name"),
     "email": ("email", "student_email", "student email", "login_id", "login id", "sis login id"),
     "section": ("section", "section_name", "section name"),
+    "password": ("password", "initial_password", "initial password", "temporary_password", "temporary password"),
+    "is_active": ("is_active", "active", "account_active", "account active", "status"),
+    "must_change_password": (
+        "must_change_password",
+        "must change password",
+        "force_password_change",
+        "force password change",
+        "temporary",
+    ),
 }
 
 
@@ -163,7 +175,7 @@ def _active_student_enrollments(db: Session) -> list[Enrollment]:
     return (
         db.query(Enrollment)
         .join(User)
-        .filter(Enrollment.role == "student", Enrollment.status == "active")
+        .filter(Enrollment.role == "student", Enrollment.status == "active", User.is_active.is_(True))
         .order_by(User.full_name)
         .all()
     )
@@ -299,6 +311,25 @@ def _csv_value(row: Mapping[str, str], aliases: tuple[str, ...]) -> str:
 
 def _valid_email(value: str) -> bool:
     return "@" in value and "." in value.rsplit("@", 1)[-1]
+
+
+def _csv_bool(value: str, default: bool) -> bool:
+    if not value:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "active", "enabled"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "inactive", "disabled"}:
+        return False
+    return default
+
+
+def _account_status(user: User) -> str:
+    if not user.is_active:
+        return "inactive"
+    if user.must_change_password:
+        return "password_change_required"
+    return "active"
 
 
 def _default_course(db: Session) -> Course:
@@ -445,16 +476,27 @@ def _upsert_roster_student(db: Session, payload: RosterStudentIn) -> tuple[User,
     email = payload.email.strip().lower()
     user = db.query(User).filter_by(email=email).first()
     created = False
+    password = payload.password.strip()
     if not user:
-        user = User(email=email, full_name=payload.full_name.strip(), role="student", hashed_password=hash_password(payload.password))
+        user = User(
+            email=email,
+            full_name=payload.full_name.strip(),
+            role="student",
+            hashed_password=hash_password(password),
+            is_active=payload.is_active,
+            must_change_password=payload.must_change_password,
+        )
         db.add(user)
         db.flush()
         created = True
     else:
         user.full_name = payload.full_name.strip()
         user.role = "student"
-        if payload.password:
-            user.hashed_password = hash_password(payload.password)
+        user.is_active = payload.is_active
+        user.must_change_password = payload.must_change_password
+        if password:
+            user.hashed_password = hash_password(password)
+            user.password_updated_at = datetime.now(UTC).replace(tzinfo=None)
 
     enrollment = db.query(Enrollment).filter_by(course_id=course.id, user_id=user.id).first()
     if not enrollment:
@@ -485,6 +527,9 @@ def _roster_rows(db: Session) -> list[RosterStudentOut]:
                 full_name=enrollment.user.full_name,
                 email=enrollment.user.email,
                 section=enrollment.section.name if enrollment.section else "",
+                is_active=enrollment.user.is_active,
+                must_change_password=enrollment.user.must_change_password,
+                account_status=_account_status(enrollment.user),
                 total_assignments=total_assignments,
                 submissions_count=len(submissions),
                 submitted_count=sum(1 for submission in submissions if submission.status == "submitted"),
@@ -716,6 +761,39 @@ def add_roster_student(
     return next(student for student in _roster_rows(db) if student.student_id == user.id)
 
 
+@router.patch("/roster/students/{student_id}/account", response_model=RosterStudentOut)
+def update_student_account(
+    student_id: int,
+    payload: AccountStatusIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> RosterStudentOut:
+    user = db.get(User, student_id)
+    if not user or user.role != "student":
+        raise HTTPException(status_code=404, detail="Student not found")
+    user.is_active = payload.is_active
+    user.must_change_password = payload.must_change_password
+    db.commit()
+    return next(student for student in _roster_rows(db) if student.student_id == user.id)
+
+
+@router.post("/roster/students/{student_id}/reset-password", response_model=RosterStudentOut)
+def reset_student_password(
+    student_id: int,
+    payload: ResetPasswordIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> RosterStudentOut:
+    user = db.get(User, student_id)
+    if not user or user.role != "student":
+        raise HTTPException(status_code=404, detail="Student not found")
+    user.hashed_password = hash_password(payload.new_password)
+    user.must_change_password = payload.must_change_password
+    user.password_updated_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+    return next(student for student in _roster_rows(db) if student.student_id == user.id)
+
+
 @router.post("/roster/import", response_model=RosterImportOut)
 def import_roster(
     payload: RosterImportIn,
@@ -738,6 +816,9 @@ def import_roster(
         email = _csv_value(normalized, ROSTER_FIELD_ALIASES["email"]).lower()
         full_name = _csv_value(normalized, ROSTER_FIELD_ALIASES["full_name"])
         section = _csv_value(normalized, ROSTER_FIELD_ALIASES["section"]) or payload.default_section
+        password = _csv_value(normalized, ROSTER_FIELD_ALIASES["password"]) or "password123"
+        is_active = _csv_bool(_csv_value(normalized, ROSTER_FIELD_ALIASES["is_active"]), True)
+        must_change_password = _csv_bool(_csv_value(normalized, ROSTER_FIELD_ALIASES["must_change_password"]), True)
         if not email or not full_name:
             skipped_count += 1
             errors.append(f"Line {line_number}: missing email or full_name")
@@ -746,7 +827,17 @@ def import_roster(
             skipped_count += 1
             errors.append(f"Line {line_number}: invalid email/login_id")
             continue
-        _, created = _upsert_roster_student(db, RosterStudentIn(email=email, full_name=full_name, section=section))
+        _, created = _upsert_roster_student(
+            db,
+            RosterStudentIn(
+                email=email,
+                full_name=full_name,
+                section=section,
+                password=password,
+                is_active=is_active,
+                must_change_password=must_change_password,
+            ),
+        )
         if created:
             created_count += 1
         else:
@@ -763,7 +854,7 @@ def roster_csv(
     rows = _roster_rows(db)
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["full_name", "email", "sis_user_id", "section", "submitted_count", "graded_count", "missing_count", "warning_count"])
+    writer.writerow(["full_name", "email", "sis_user_id", "section", "account_status", "submitted_count", "graded_count", "missing_count", "warning_count"])
     for student in rows:
         writer.writerow(
             [
@@ -771,6 +862,7 @@ def roster_csv(
                 student.email,
                 student.email,
                 student.section,
+                student.account_status,
                 student.submitted_count,
                 student.graded_count,
                 student.missing_count,

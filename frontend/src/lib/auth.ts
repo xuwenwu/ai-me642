@@ -31,6 +31,12 @@ export const setAuth = (accessToken: string, user: User) => {
   storage.setItem('user', JSON.stringify(user));
 };
 
+export const updateStoredUser = (user: User) => {
+  const storage = availableStorage();
+  if (!storage) throw new Error('Browser storage is blocked. Enable site storage or leave private browsing mode.');
+  storage.setItem('user', JSON.stringify(user));
+};
+
 export const currentUser = (): User | null => {
   if (typeof window === 'undefined') return null;
   const raw = storedValue('user');

@@ -39,6 +39,8 @@ def main() -> None:
             user.full_name = args.full_name
             user.role = args.role
             user.hashed_password = hash_password(args.password)
+            user.is_active = True
+            user.must_change_password = False
             action = "Updated"
         else:
             user = User(
@@ -46,6 +48,8 @@ def main() -> None:
                 full_name=args.full_name,
                 role=args.role,
                 hashed_password=hash_password(args.password),
+                is_active=True,
+                must_change_password=False,
             )
             db.add(user)
             action = "Created"

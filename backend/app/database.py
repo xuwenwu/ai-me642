@@ -29,6 +29,14 @@ def _ensure_local_sqlite_columns() -> None:
         return
     tables = set(inspect(engine).get_table_names())
     statements: list[str] = []
+    if "users" in tables:
+        columns = _sqlite_columns("users")
+        if "is_active" not in columns:
+            statements.append("ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1")
+        if "must_change_password" not in columns:
+            statements.append("ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT 0")
+        if "password_updated_at" not in columns:
+            statements.append("ALTER TABLE users ADD COLUMN password_updated_at DATETIME")
     if "ai_policies" in tables:
         columns = _sqlite_columns("ai_policies")
         if "assistant_enabled" not in columns:

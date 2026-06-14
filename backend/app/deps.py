@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from .auth import verify_access_token
 from .database import get_db
@@ -7,6 +7,7 @@ from .models import User
 
 
 def current_user(
+    request: Request,
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> User:
@@ -18,6 +19,10 @@ def current_user(
     user = db.query(User).filter_by(email=email).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive. Contact your instructor.")
+    if user.must_change_password and request.url.path not in {"/api/auth/me", "/api/auth/change-password"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password change required")
     return user
 
 
@@ -32,4 +37,3 @@ def ensure_owner_or_staff(resource_user_id: int, user: User) -> None:
         return
     if resource_user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this resource")
-

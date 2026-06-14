@@ -26,7 +26,7 @@ class Settings(BaseModel):
     seed_demo_data: bool = _env_bool("SEED_DEMO_DATA", True)
     ai_provider_enabled: bool = _env_bool("AI_PROVIDER_ENABLED", False)
     ai_provider_mode: str = os.getenv("AI_PROVIDER_MODE", "offline")
-    ai_provider_model: str = os.getenv("AI_PROVIDER_MODEL", "gpt-5.5-mini")
+    ai_provider_model: str = os.getenv("AI_PROVIDER_MODEL", "gpt-5.4-mini")
     ai_max_prompt_chars: int = int(os.getenv("AI_MAX_PROMPT_CHARS", "6000"))
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     allowed_extensions: set[str] = {

@@ -55,9 +55,12 @@ cd backend
 
 1. Confirm `.github/workflows/ci.yml` exists.
 2. Confirm `.env.production.example` includes `APP_ENV=production`, `SEED_DEMO_DATA=false`, and non-wildcard `CORS_ORIGINS`.
-3. Read `docs/DEPLOYMENT.md`.
-4. Read `docs/SECURITY_CHECKLIST.md`.
-5. For a local backup dry run, use:
+3. Confirm `.env.pilot.example`, `docker-compose.pilot.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` exist.
+4. Confirm `/api/health/ready` returns database and upload-root readiness.
+5. Read `docs/DEPLOYMENT.md`.
+6. Read `docs/PILOT_OPERATIONS.md`.
+7. Read `docs/SECURITY_CHECKLIST.md`.
+8. For a local backup dry run, use:
 
 ```powershell
 cd backend
@@ -82,3 +85,4 @@ npm run build
 - Canvas export is a CSV handoff, not a live Canvas API integration.
 - Production deployment still requires instructor-controlled hosting, HTTPS, backups, and real course secrets.
 - Controlled AI external provider mode still requires institutional/privacy review and API billing ownership.
+- Temporary phone tunnels are review tools only, not class-pilot hosting.

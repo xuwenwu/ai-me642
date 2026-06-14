@@ -1,6 +1,12 @@
 # Deployment Guide
 
-This project is still local-first, but Phase VIII adds enough guardrails to prepare a small private pilot deployment.
+This project is local-first for development, but Phase XI adds a repeatable private-pilot deployment path. The recommended pilot shape is:
+
+- Next.js frontend exposed through HTTPS.
+- FastAPI backend private to the host or container network.
+- Frontend `/api` proxy routed to the backend.
+- SQLite plus uploads on a backed-up server volume for a small class pilot.
+- External AI provider disabled unless approved by the instructor and institution.
 
 ## Environments
 
@@ -13,6 +19,7 @@ Required production choices:
 - `SEED_DEMO_DATA=false`
 - `CORS_ORIGINS` set to the real frontend origin, not `*`.
 - `UPLOAD_ROOT` set to a backed-up server directory.
+- `BACKUP_ROOT` set to a persistent backup directory.
 - `DATABASE_URL` set to the production database.
 - `AI_PROVIDER_ENABLED=false` unless the course has approved external AI provider use.
 
@@ -34,6 +41,46 @@ npm run typecheck
 npm run build
 ```
 
+## Docker Compose Pilot Stack
+
+Use this for the first stable pilot deployment.
+
+1. Copy the pilot environment template:
+
+```powershell
+Copy-Item .env.pilot.example .env.pilot
+```
+
+2. Edit `.env.pilot`:
+
+- Replace `SECRET_KEY` with a strong random value.
+- Set `CORS_ORIGINS` to the final HTTPS course URL.
+- Keep `SEED_DEMO_DATA=false`.
+- Keep `AI_PROVIDER_ENABLED=false` unless external AI has been approved.
+
+3. Build and start:
+
+```powershell
+docker compose -f docker-compose.pilot.yml --env-file .env.pilot up -d --build
+```
+
+4. Verify local readiness:
+
+```powershell
+docker compose -f docker-compose.pilot.yml ps
+Invoke-WebRequest http://127.0.0.1:3000/api/health/ready -UseBasicParsing
+```
+
+5. Put HTTPS in front of `127.0.0.1:3000`. The backend should stay private behind the frontend proxy.
+
+6. Create the first instructor account:
+
+```powershell
+docker compose -f docker-compose.pilot.yml exec backend python scripts/create_admin.py --email instructor@your.edu --full-name "Course Instructor" --password "replace-with-temporary-password"
+```
+
+See `docs/PILOT_OPERATIONS.md` for backups, upgrades, rollback, and incident procedures.
+
 ## Backend
 
 ```powershell
@@ -46,6 +93,18 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 For production, run migrations first, then start the server with production environment variables. Do not run the demo reset script against production data.
+
+Readiness endpoint:
+
+```text
+GET /api/health/ready
+```
+
+Expected successful response:
+
+```json
+{"status":"ok","checks":{"database":"ok","upload_root":"ok"}}
+```
 
 ## Frontend
 
@@ -84,3 +143,7 @@ GitHub Actions runs on pull requests and pushes to `main`:
 - backend tests with Python 3.12
 - frontend typecheck
 - frontend production build
+
+## Temporary Phone Tunnels
+
+Temporary tunnels such as localhost.run or localtunnel are acceptable only for review. They are not a pilot deployment because the URL can change, the workstation must stay awake, and there is no backup, uptime, or HTTPS domain control beyond the tunnel provider. Use the Compose pilot stack plus an HTTPS reverse proxy for student-facing use.

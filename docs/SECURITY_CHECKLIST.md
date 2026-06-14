@@ -14,6 +14,7 @@ Use this before exposing the app beyond a trusted local workstation.
 - Store `.env` outside Git and never commit secrets.
 - Back up the database and `UPLOAD_ROOT`.
 - Confirm `backend/scripts/reset_demo_data.py` is only used on local SQLite demo data.
+- Confirm `/api/health/ready` reports database and upload storage readiness.
 - Run GitHub Actions or local checks before deploy.
 
 ## Current Guardrails
@@ -22,6 +23,7 @@ Use this before exposing the app beyond a trusted local workstation.
 - Role checks protect instructor/TA routes.
 - Students can access only their own submissions/projects.
 - Production startup rejects unsafe demo defaults.
+- Readiness checks verify database connectivity and upload storage writeability.
 - Basic security headers are added to backend responses.
 - Controlled AI provider calls require instructor policy and server environment opt-in.
 - External AI calls block prompts with simple private-data flags.

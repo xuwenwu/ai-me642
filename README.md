@@ -29,7 +29,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
 - CSV gradebook export, filter-aware queue export, Canvas import CSV, LMS detail CSV, and roster CSV export.
 - GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
-- Production environment guardrails, security headers, deployment docs, and local backup helper.
+- Production environment guardrails, security headers, Docker pilot packaging, deployment docs, readiness checks, and local backup helper.
 - Reproducible ZIP package export.
 
 ## What This MVP Does Not Do
@@ -151,6 +151,8 @@ Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before
 For pilot review, also use `docs/PILOT_READINESS.md`.
 
 For deployment and security hardening, use `docs/DEPLOYMENT.md` and `docs/SECURITY_CHECKLIST.md`.
+
+For a stable small-class pilot deployment, use `docs/PILOT_OPERATIONS.md` with `docker-compose.pilot.yml`.
 
 For controlled AI provider setup, use `docs/CONTROLLED_AI.md`.
 

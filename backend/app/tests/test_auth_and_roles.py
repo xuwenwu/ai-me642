@@ -14,6 +14,15 @@ def test_health_reports_environment_and_security_headers():
         assert response.headers["Referrer-Policy"] == "same-origin"
 
 
+def test_readiness_checks_database_and_upload_root():
+    with TestClient(app) as client:
+        response = client.get("/api/health/ready")
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        assert response.json()["checks"]["database"] == "ok"
+        assert response.json()["checks"]["upload_root"] == "ok"
+
+
 def test_production_runtime_rejects_unsafe_defaults():
     settings = Settings(app_env="production", secret_key="dev-secret-change-me", seed_demo_data=True)
     with pytest.raises(RuntimeError, match="Production configuration is not safe"):

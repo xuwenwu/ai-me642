@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
 from pathlib import Path
 import sys
 import zipfile
@@ -15,6 +16,16 @@ if str(BACKEND_ROOT) not in sys.path:
 from app.config import get_settings  # noqa: E402
 
 
+def _backup_root(upload_root: Path) -> Path:
+    raw = os.getenv("BACKUP_ROOT")
+    if raw:
+        path = Path(raw)
+        return path if path.is_absolute() else BACKEND_ROOT / path
+    if upload_root.is_absolute():
+        return upload_root.parent / "backups"
+    return BACKEND_ROOT / "data" / "backups"
+
+
 def _sqlite_path(database_url: str) -> Path | None:
     url = make_url(database_url)
     if url.drivername not in {"sqlite", "sqlite+pysqlite"} or not url.database or url.database == ":memory:":
@@ -25,12 +36,12 @@ def _sqlite_path(database_url: str) -> Path | None:
 
 def main() -> None:
     settings = get_settings()
-    backup_root = BACKEND_ROOT / "data" / "backups"
+    upload_root = settings.upload_root if settings.upload_root.is_absolute() else BACKEND_ROOT / settings.upload_root
+    backup_root = _backup_root(upload_root)
     backup_root.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = backup_root / f"ai_me642_backup_{stamp}.zip"
     db_path = _sqlite_path(settings.database_url)
-    upload_root = settings.upload_root if settings.upload_root.is_absolute() else BACKEND_ROOT / settings.upload_root
 
     with zipfile.ZipFile(backup_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         if db_path and db_path.exists():

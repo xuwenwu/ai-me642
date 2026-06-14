@@ -90,3 +90,12 @@
 - Provider metadata, response id, model, and privacy flags on prompt logs.
 - Prompt privacy checks before external provider calls.
 - Controlled AI setup documentation.
+
+## Phase XI: Deployable Pilot Release
+
+- Docker-based backend and frontend runtime packaging for a private pilot host.
+- Compose stack with private backend networking, persistent data volume, restart policy, and service health checks.
+- Production pilot environment template kept separate from local development secrets.
+- Backend readiness endpoint that verifies database access and upload storage writeability.
+- Pilot operations runbook for setup, health checks, backups, upgrades, rollback, incidents, and exit exports.
+- Documentation updates that distinguish temporary workstation tunnels from a stable course deployment.

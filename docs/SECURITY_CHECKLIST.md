@@ -13,6 +13,7 @@ Use this before exposing the app beyond a trusted local workstation.
 - Serve the site over HTTPS.
 - Store `.env` outside Git and never commit secrets.
 - Back up the database and `UPLOAD_ROOT`.
+- Archive course records at the end of a pilot and store the archive outside the host.
 - Confirm `backend/scripts/reset_demo_data.py` is only used on local SQLite demo data.
 - Confirm `/api/health/ready` reports database and upload storage readiness.
 - Require students to change temporary passwords before using the workspace.

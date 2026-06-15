@@ -108,3 +108,40 @@
 - Logged-in users can change their own password.
 - Instructors can reset student passwords, require/clear password changes, and deactivate/reactivate student accounts.
 - Roster import accepts optional password, active status, and force-password-change columns.
+
+## Phase XIII: Real Hosting / Domain / HTTPS
+
+- Caddy reverse-proxy template for a stable HTTPS course domain.
+- Hosted Compose override that exposes only ports 80/443 and keeps app services private.
+- Deployment docs distinguish review tunnels from hosted class use.
+
+## Phase XIV: Course Data Retention and Privacy
+
+- Course archive script exports roster, assignments, submissions, grades, prompt logs, and uploaded files.
+- Retention documentation separates operational backups from course-record archives.
+- Environment templates include archive storage locations.
+
+## Phase XV: Better Instructor Workflow
+
+- Instructor Review includes a direct needs-attention panel.
+- Needs-attention items select the related submission in the review workflow.
+- Review page combines triage, filters, evidence, plots, interpretation, and grading.
+
+## Phase XVI: Student Experience Polish
+
+- Student Dashboard gives assignment-specific next-step guidance.
+- Empty assignment state is clearer for fresh production pilots.
+- Next-step cues distinguish create, validate, interpret, submit, wait-for-grade, and review-feedback states.
+
+## Phase XVII: Canvas / LMS API Scaffolding
+
+- Server-side Canvas configuration is available but disabled by default.
+- Instructor Canvas status endpoint reports whether integration is configured without exposing tokens.
+- CSV export remains the stable LMS workflow until institutional approval and test-course verification.
+
+## Phase XVIII: More Scientific Validation Depth
+
+- Assignment validation settings can require thermo columns.
+- Assignment validation settings can enforce minimum parsed run length.
+- Assignment validation settings can fail excessive LAMMPS warning counts.
+- Validation tests cover the new assignment-level thresholds.

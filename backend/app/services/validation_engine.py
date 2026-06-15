@@ -355,6 +355,15 @@ def _multi_log_comparison(parsed_logs: list[tuple[FileArtifact, dict]]) -> tuple
     ]
 
 
+def _setting_list(settings: dict, key: str) -> list[str]:
+    raw = settings.get(key, [])
+    if isinstance(raw, list):
+        return [str(item) for item in raw if str(item).strip()]
+    if isinstance(raw, str):
+        return [item.strip() for item in raw.split(",") if item.strip()]
+    return []
+
+
 def validate_submission(db: Session, submission: Submission) -> ValidationReport:
     assignment = submission.assignment
     validation_profile = assignment.validation_profile if assignment else "lammps_basic_health"
@@ -459,6 +468,27 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             continue
         parsed = parse_lammps_log(Path(file.file_path))
         parsed_logs.append((file, parsed))
+        required_columns = _setting_list(validation_settings, "required_thermo_columns")
+        if required_columns:
+            missing_columns = [column for column in required_columns if column not in parsed["columns_detected"]]
+            checks.append(
+                _check(
+                    "required_thermo_columns",
+                    "passed" if not missing_columns else "failed",
+                    "high",
+                    "Required thermo columns are present" if not missing_columns else "Required thermo columns are missing",
+                    f"required={', '.join(required_columns)}; missing={', '.join(missing_columns) if missing_columns else 'none'}",
+                )
+            )
+            if missing_columns:
+                interpretation_notes.append(
+                    _note(
+                        "Required thermo columns",
+                        "concern",
+                        "The log is missing assignment-required thermo columns, so the validation evidence is incomplete.",
+                        ", ".join(missing_columns),
+                    )
+                )
         series = _thermo_series(file.original_filename, parsed)
         if series:
             thermo_series.append(series)
@@ -490,6 +520,13 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             )
         )
         if parsed["warnings"]:
+            max_warnings = validation_settings.get("max_lammps_warnings")
+            warning_count = len(parsed["warnings"])
+            warning_status = "warning"
+            warning_message = "LAMMPS warning lines detected"
+            if max_warnings is not None and warning_count > int(max_warnings):
+                warning_status = "failed"
+                warning_message = "LAMMPS warning count exceeds assignment threshold"
             interpretation_notes.append(
                 _note(
                     "LAMMPS warnings",
@@ -501,10 +538,10 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
             checks.append(
                 _check(
                     "lammps_warnings",
-                    "warning",
+                    warning_status,
                     "medium",
-                    "LAMMPS warning lines detected",
-                    " | ".join(parsed["warnings"][:3]),
+                    warning_message,
+                    f"count={warning_count}; threshold={max_warnings}; examples={' | '.join(parsed['warnings'][:3])}",
                 )
             )
         checks.append(
@@ -540,6 +577,8 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
         if "Step" in rows[0]:
             steps = [row["Step"] for row in rows if "Step" in row]
             monotonic = all(b >= a for a, b in zip(steps, steps[1:]))
+            run_span = max(steps) - min(steps) if steps else 0
+            min_run_steps = validation_settings.get("min_run_steps")
             checks.append(
                 _check(
                     "step_monotonicity",
@@ -549,6 +588,26 @@ def validate_submission(db: Session, submission: Submission) -> ValidationReport
                     str(steps[:8]),
                 )
             )
+            if min_run_steps is not None:
+                passed = run_span >= float(min_run_steps)
+                checks.append(
+                    _check(
+                        "minimum_run_length",
+                        "passed" if passed else "warning",
+                        "medium",
+                        "Run length meets assignment threshold" if passed else "Run length is shorter than assignment threshold",
+                        f"span={run_span:.0f}; threshold={float(min_run_steps):.0f}",
+                    )
+                )
+                if not passed:
+                    interpretation_notes.append(
+                        _note(
+                            "Run length",
+                            "needs_review",
+                            "The parsed Step range is shorter than the assignment threshold; discuss whether the run is long enough.",
+                            f"span={run_span:.0f}; threshold={float(min_run_steps):.0f}",
+                        )
+                    )
         if "Temp" in rows[0]:
             temps = [row.get("Temp", math.nan) for row in rows]
             bad = any(math.isnan(temp) or temp < 0 or temp > 10000 for temp in temps)

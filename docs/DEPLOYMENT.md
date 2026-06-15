@@ -81,6 +81,17 @@ docker compose -f docker-compose.pilot.yml exec backend python scripts/create_ad
 
 See `docs/PILOT_OPERATIONS.md` for backups, upgrades, rollback, and incident procedures.
 
+## Hosted HTTPS Stack
+
+For a real class URL, copy `Caddyfile.example` to `Caddyfile`, replace `your-course-domain.example.edu`, and point DNS at the host. Then start the pilot stack with the hosted override:
+
+```powershell
+Copy-Item Caddyfile.example Caddyfile
+docker compose -f docker-compose.pilot.yml -f docker-compose.hosted.yml --env-file .env.pilot up -d --build
+```
+
+The hosted override exposes only Caddy on ports `80` and `443`. The frontend and backend stay inside the Docker network.
+
 ## Backend
 
 ```powershell

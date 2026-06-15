@@ -170,3 +170,19 @@ def test_validation_compares_multiple_lammps_logs():
 
     assert any(check.check_type == "multi_log_comparison" for check in report.checks)
     assert any(note["topic"] == "Multi-run comparison" for note in report.interpretation_notes)
+
+
+def test_validation_honors_assignment_threshold_settings():
+    db = make_db()
+    submission = base_submission(db)
+    submission.assignment.validation_settings_json = (
+        '{"required_thermo_columns":["Step","Temp","MissingColumn"],"min_run_steps":999999}'
+    )
+    db.commit()
+    db.refresh(submission)
+
+    report = validate_submission(db, submission)
+
+    checks = {check.check_type: check for check in report.checks}
+    assert checks["required_thermo_columns"].status == "failed"
+    assert checks["minimum_run_length"].status == "warning"

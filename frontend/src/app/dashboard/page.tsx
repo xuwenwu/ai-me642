@@ -7,6 +7,16 @@ import { api } from '@/lib/api';
 import { useCurrentUser } from '@/lib/auth';
 import type { Assignment, Submission } from '@/lib/types';
 
+function nextStep(assignment: Assignment, submission: Submission | undefined) {
+  if (!submission) return 'Create a submission package and upload the required evidence.';
+  const latest = submission.validation_reports[0];
+  if (!latest) return 'Run validation after uploading your LAMMPS files.';
+  if (!submission.student_interpretation?.trim()) return 'Write and save your interpretation using the validation cues.';
+  if (submission.status !== 'submitted') return 'Submit the assignment package when your evidence and interpretation are ready.';
+  if (!submission.grade) return 'Submitted. Watch for instructor feedback and grading.';
+  return `Graded: ${submission.grade.final_score}. Review feedback and keep your reproducible package.`;
+}
+
 export default function DashboardPage() {
   const { user, ready } = useCurrentUser();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -32,7 +42,8 @@ export default function DashboardPage() {
       {error ? <div className="error">{error}</div> : null}
       <div className="grid two">
         <section className="card">
-          <h2>Phase II Pilot Labs</h2>
+          <h2>Assignments</h2>
+          {!assignments.length ? <p className="muted">No published assignments are available yet.</p> : null}
           {assignments.map((assignment) => {
             const submission = submissionByAssignment.get(assignment.id);
             return (
@@ -44,6 +55,7 @@ export default function DashboardPage() {
                 <p>{assignment.description}</p>
                 <p className="muted">Due: {assignment.due_date || 'not set'} - {assignment.total_points} pts - {assignment.validation_profile}</p>
                 <p className="muted">Validation: {submission?.validation_reports[0]?.status || 'not run'}</p>
+                <div className="assignment-context"><strong>Next step</strong><p>{nextStep(assignment, submission)}</p></div>
                 <Link href="/submissions">Open submission workflow</Link>
               </div>
             );

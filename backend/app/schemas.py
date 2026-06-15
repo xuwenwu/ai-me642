@@ -430,3 +430,11 @@ class RosterImportOut(BaseModel):
     updated_count: int
     skipped_count: int
     errors: list[str] = Field(default_factory=list)
+
+
+class CanvasStatusOut(BaseModel):
+    enabled: bool
+    configured: bool
+    base_url: str = ""
+    course_id: str = ""
+    message: str

@@ -29,6 +29,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - AI-disclosure quality indicators for missing or thin prompt evidence.
 - Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
 - CSV gradebook export, filter-aware queue export, Canvas import CSV, LMS detail CSV, and roster CSV export.
+- Hosted HTTPS deployment templates, Canvas API status scaffolding, and course data archive tooling.
 - GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
 - Production environment guardrails, security headers, Docker pilot packaging, deployment docs, readiness checks, and local backup helper.
 - Reproducible ZIP package export.

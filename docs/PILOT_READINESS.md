@@ -67,15 +67,24 @@ cd backend
 1. Confirm `.github/workflows/ci.yml` exists.
 2. Confirm `.env.production.example` includes `APP_ENV=production`, `SEED_DEMO_DATA=false`, and non-wildcard `CORS_ORIGINS`.
 3. Confirm `.env.pilot.example`, `docker-compose.pilot.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` exist.
-4. Confirm `/api/health/ready` returns database and upload-root readiness.
-5. Read `docs/DEPLOYMENT.md`.
-6. Read `docs/PILOT_OPERATIONS.md`.
-7. Read `docs/SECURITY_CHECKLIST.md`.
-8. For a local backup dry run, use:
+4. Confirm `docker-compose.hosted.yml` and `Caddyfile.example` exist for hosted HTTPS deployment.
+5. Confirm `/api/health/ready` returns database and upload-root readiness.
+6. Read `docs/DEPLOYMENT.md`.
+7. Read `docs/PILOT_OPERATIONS.md`.
+8. Read `docs/DATA_RETENTION.md`.
+9. Read `docs/SECURITY_CHECKLIST.md`.
+10. For a local backup dry run, use:
 
 ```powershell
 cd backend
 .\.venv\Scripts\python.exe scripts\backup_local_data.py
+```
+
+11. For a local archive dry run, use:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\archive_course_data.py
 ```
 
 ## Frontend Checks

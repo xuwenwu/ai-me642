@@ -298,6 +298,20 @@ table {
   margin-bottom: 0.5rem;
 }
 
+.triage-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.triage-item {
+  align-items: start;
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: 1fr 1.2fr 1.4fr;
+  text-align: left;
+}
+
 td,
 th {
   border-bottom: 1px solid var(--line);

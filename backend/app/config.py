@@ -29,6 +29,10 @@ class Settings(BaseModel):
     ai_provider_model: str = os.getenv("AI_PROVIDER_MODEL", "gpt-5.4-mini")
     ai_max_prompt_chars: int = int(os.getenv("AI_MAX_PROMPT_CHARS", "6000"))
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    canvas_enabled: bool = _env_bool("CANVAS_ENABLED", False)
+    canvas_base_url: str = os.getenv("CANVAS_BASE_URL", "")
+    canvas_course_id: str = os.getenv("CANVAS_COURSE_ID", "")
+    canvas_api_token: str = os.getenv("CANVAS_API_TOKEN", "")
     allowed_extensions: set[str] = {
         ".in",
         ".log",
@@ -72,6 +76,9 @@ def validate_runtime_security(settings: Settings) -> None:
         errors.append("CORS_ORIGINS must not include '*' in production.")
     if settings.ai_provider_enabled and settings.ai_provider_mode == "openai" and not settings.openai_api_key:
         errors.append("OPENAI_API_KEY must be set when OpenAI provider calls are enabled.")
+    if settings.canvas_enabled:
+        if not settings.canvas_base_url or not settings.canvas_course_id or not settings.canvas_api_token:
+            errors.append("CANVAS_BASE_URL, CANVAS_COURSE_ID, and CANVAS_API_TOKEN must be set when Canvas integration is enabled.")
     if errors:
         raise RuntimeError("Production configuration is not safe: " + " ".join(errors))
 

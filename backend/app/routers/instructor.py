@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from ..auth import hash_password
+from ..config import get_settings
 from ..database import get_db
 from ..deps import staff_user
 from ..models import AIPolicy, Assignment, Course, CriterionScore, Enrollment, Grade, PromptLogEntry, PromptTemplate, Rubric, RubricCriterion, Section, Submission, User
@@ -18,6 +19,7 @@ from ..schemas import (
     AssignmentManageIn,
     AssignmentAnalyticsOut,
     AssignmentOut,
+    CanvasStatusOut,
     GradeIn,
     GradeOut,
     GradebookAssignmentSummaryOut,
@@ -36,6 +38,7 @@ from ..schemas import (
     RubricCriterionOut,
     SubmissionOut,
 )
+from ..services.canvas_provider import canvas_status
 
 
 router = APIRouter(prefix="/instructor", tags=["instructor"])
@@ -1062,3 +1065,8 @@ def gradebook_csv(
             ]
         )
     return _csv_response(buffer.getvalue(), "gradebook.csv")
+
+
+@router.get("/canvas/status", response_model=CanvasStatusOut)
+def get_canvas_status(_: User = Depends(staff_user)) -> CanvasStatusOut:
+    return CanvasStatusOut(**canvas_status(get_settings()))

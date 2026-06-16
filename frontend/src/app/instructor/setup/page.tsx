@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { AssistantOutput } from '@/components/AssistantOutput';
 import { fileTypeLabels } from '@/components/ValidationSummary';
 import { api, download } from '@/lib/api';
 import type { AIPolicy, AIPolicyInput, AIProviderReadiness, AIProviderTestResult, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
@@ -433,7 +434,7 @@ export default function InstructorSetupPage() {
               {aiTestResult ? (
                 <div className="success" style={{ marginTop: '0.85rem' }}>
                   <strong>{aiTestResult.provider_model}</strong>
-                  <p>{aiTestResult.output_summary}</p>
+                  <AssistantOutput text={aiTestResult.output_summary} />
                   {aiTestResult.provider_total_tokens ? (
                     <p>Usage: {aiTestResult.provider_input_tokens} input / {aiTestResult.provider_output_tokens} output tokens.</p>
                   ) : null}

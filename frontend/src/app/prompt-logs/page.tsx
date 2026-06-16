@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { AssistantOutput } from '@/components/AssistantOutput';
 import { api } from '@/lib/api';
 import type { AIPolicy, Assignment, ProjectSpec, PromptLog, PromptTemplate } from '@/lib/types';
 
@@ -166,6 +167,11 @@ export default function PromptLogsPage() {
         </div>
         <label>Prompt text<textarea value={form.prompt_text} onChange={(e) => setForm({ ...form, prompt_text: e.target.value })} /></label>
         <label>AI output summary<textarea value={form.ai_output_summary} onChange={(e) => setForm({ ...form, ai_output_summary: e.target.value })} /></label>
+        {form.ai_output_summary.trim() ? (
+          <div className="assignment-context">
+            <AssistantOutput text={form.ai_output_summary} />
+          </div>
+        ) : null}
         <div className="grid two">
           <label>Accepted parts<textarea value={form.accepted_parts} onChange={(e) => setForm({ ...form, accepted_parts: e.target.value })} /></label>
           <label>Rejected parts<textarea value={form.rejected_parts} onChange={(e) => setForm({ ...form, rejected_parts: e.target.value })} /></label>
@@ -187,11 +193,24 @@ export default function PromptLogsPage() {
         <h2>Recorded Logs</h2>
         {logs.length ? (
           logs.map((log) => (
-            <p key={log.id}>
-              <strong>{log.title}</strong> - {log.ai_tool_name} - {log.task_type}
-              {log.provider_status !== 'manual' ? <span className="muted"> - {log.provider_status}</span> : null}
-              {log.provider_total_tokens ? <span className="muted"> - {log.provider_total_tokens} tokens</span> : null}
-            </p>
+            <div className="assignment-row" key={log.id}>
+              <div className="section-header">
+                <div>
+                  <strong>{log.title}</strong>
+                  <div className="muted">{log.ai_tool_name} - {log.task_type}</div>
+                </div>
+                <div className="row">
+                  {log.provider_status !== 'manual' ? <span className="status passed">{log.provider_status}</span> : null}
+                  {log.provider_total_tokens ? <span className="muted">{log.provider_total_tokens} tokens</span> : null}
+                </div>
+              </div>
+              {log.ai_output_summary ? (
+                <details className="details-panel">
+                  <summary>Review guidance</summary>
+                  <AssistantOutput text={log.ai_output_summary} />
+                </details>
+              ) : null}
+            </div>
           ))
         ) : <p className="muted">No prompt logs recorded yet.</p>}
       </section>

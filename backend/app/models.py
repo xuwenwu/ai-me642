@@ -224,6 +224,9 @@ class PromptLogEntry(Base):
     provider_status: Mapped[str] = mapped_column(String(64), default="manual")
     provider_model: Mapped[str] = mapped_column(String(128), default="")
     provider_response_id: Mapped[str] = mapped_column(String(255), default="")
+    provider_input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    provider_output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    provider_total_tokens: Mapped[int] = mapped_column(Integer, default=0)
     privacy_flags_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 

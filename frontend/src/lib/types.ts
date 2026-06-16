@@ -74,6 +74,9 @@ export type PromptLog = {
   provider_status: string;
   provider_model: string;
   provider_response_id: string;
+  provider_input_tokens: number;
+  provider_output_tokens: number;
+  provider_total_tokens: number;
   privacy_flags: string[];
   created_at: string;
 };
@@ -124,6 +127,9 @@ export type AIProviderTestResult = {
   provider_status: string;
   provider_model: string;
   output_summary: string;
+  provider_input_tokens: number;
+  provider_output_tokens: number;
+  provider_total_tokens: number;
   privacy_flags: string[];
   readiness: AIProviderReadiness;
 };

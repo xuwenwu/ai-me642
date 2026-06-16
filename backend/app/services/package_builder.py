@@ -70,6 +70,13 @@ def build_submission_zip(db: Session, submission: Submission) -> bytes:
                         "manual_edits": p.manual_edits,
                         "validation_performed": p.validation_performed,
                         "remaining_concerns": p.remaining_concerns,
+                        "provider_status": p.provider_status,
+                        "provider_model": p.provider_model,
+                        "provider_response_id": p.provider_response_id,
+                        "provider_input_tokens": p.provider_input_tokens,
+                        "provider_output_tokens": p.provider_output_tokens,
+                        "provider_total_tokens": p.provider_total_tokens,
+                        "privacy_flags": p.privacy_flags,
                         "created_at": p.created_at.isoformat(),
                     }
                     for p in prompt_logs

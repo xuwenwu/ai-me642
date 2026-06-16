@@ -126,6 +126,9 @@ class PromptLogIn(BaseModel):
     provider_status: str = "manual"
     provider_model: str = ""
     provider_response_id: str = ""
+    provider_input_tokens: int = 0
+    provider_output_tokens: int = 0
+    provider_total_tokens: int = 0
     privacy_flags: list[str] = Field(default_factory=list)
 
 
@@ -179,6 +182,9 @@ class AIProviderTestOut(BaseModel):
     provider_status: str
     provider_model: str
     output_summary: str
+    provider_input_tokens: int = 0
+    provider_output_tokens: int = 0
+    provider_total_tokens: int = 0
     privacy_flags: list[str] = Field(default_factory=list)
     readiness: AIProviderReadinessOut
 

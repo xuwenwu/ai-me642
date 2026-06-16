@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from starlette.responses import Response
 from .config import get_settings, validate_runtime_security
 from .database import SessionLocal, init_db
-from .routers import assignments, auth, instructor, projects, prompt_logs, submissions, validation
+from .routers import assignments, auth, feedback, instructor, projects, prompt_logs, submissions, validation
 from .services.seed_data import seed
 
 
@@ -98,3 +98,5 @@ app.include_router(prompt_logs.router, prefix="/api")
 app.include_router(submissions.router, prefix="/api")
 app.include_router(validation.router, prefix="/api")
 app.include_router(instructor.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api")
+app.include_router(feedback.staff_router, prefix="/api")

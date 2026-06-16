@@ -44,6 +44,8 @@ Use this checklist when reviewing the app for a small real-class pilot.
 20. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
 21. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
 22. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
+23. Open Pilot Feedback and confirm new/blocking feedback counts appear.
+24. Submit one feedback item as a student, then triage it as instructor and download `pilot_feedback.csv`.
 
 ## Account Flow
 
@@ -110,6 +112,7 @@ npm run build
 - Automated validation is advisory evidence, not a grade.
 - No live LLM calls are made unless both instructor policy and server environment explicitly enable an external provider.
 - AI-disclosure analytics flag missing or thin evidence but do not score students automatically.
+- Pilot feedback captures user-reported friction; it is not an emergency alerting or helpdesk system.
 - Phase VI validation statically inspects uploaded scripts; it does not execute LAMMPS, Python, OVITO, or Slurm.
 - Canvas export is a CSV handoff, not a live Canvas API integration.
 - Production deployment still requires instructor-controlled hosting, HTTPS, backups, and real course secrets.

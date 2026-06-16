@@ -181,12 +181,46 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert validation_report["thermo_series"]
             assert validation_report["interpretation_notes"]
 
+            feedback = client.post(
+                "/api/feedback",
+                headers=student_headers,
+                json={
+                    "category": "validation",
+                    "severity": "blocks_progress",
+                    "page_url": "/submissions",
+                    "message": "=validation warning needs a clearer next step.",
+                    "contact_allowed": True,
+                },
+            )
+            assert feedback.status_code == 200
+            feedback_id = feedback.json()["id"]
+            assert feedback.json()["status"] == "new"
+
+            my_feedback = client.get("/api/feedback", headers=student_headers)
+            assert my_feedback.status_code == 200
+            assert any(item["id"] == feedback_id for item in my_feedback.json())
+
             instructor_login = client.post(
                 "/api/auth/login",
                 json={"email": "instructor@example.edu", "password": "password123"},
             )
             assert instructor_login.status_code == 200
             instructor_headers = {"Authorization": f"Bearer {instructor_login.json()['access_token']}"}
+
+            instructor_feedback = client.get("/api/instructor/feedback", headers=instructor_headers)
+            assert instructor_feedback.status_code == 200
+            assert instructor_feedback.json()[0]["id"] == feedback_id
+            feedback_update = client.patch(
+                f"/api/instructor/feedback/{feedback_id}",
+                headers=instructor_headers,
+                json={"status": "reviewing", "instructor_notes": "Clarify warning copy in next pass."},
+            )
+            assert feedback_update.status_code == 200
+            assert feedback_update.json()["status"] == "reviewing"
+            feedback_export = client.get("/api/instructor/feedback.csv?status=all", headers=instructor_headers)
+            assert feedback_export.status_code == 200
+            assert "validation warning" in feedback_export.text
+            assert "'=validation warning" in feedback_export.text
 
             instructor_submissions = client.get("/api/instructor/submissions", headers=instructor_headers)
             assert instructor_submissions.status_code == 200

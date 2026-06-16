@@ -68,6 +68,12 @@ def _ensure_local_sqlite_columns() -> None:
             statements.append("ALTER TABLE prompt_log_entries ADD COLUMN provider_total_tokens INTEGER NOT NULL DEFAULT 0")
         if "privacy_flags_json" not in columns:
             statements.append("ALTER TABLE prompt_log_entries ADD COLUMN privacy_flags_json TEXT NOT NULL DEFAULT '[]'")
+    if "pilot_feedback" in tables:
+        columns = _sqlite_columns("pilot_feedback")
+        if "updated_at" not in columns:
+            statements.append("ALTER TABLE pilot_feedback ADD COLUMN updated_at DATETIME")
+        if "instructor_notes" not in columns:
+            statements.append("ALTER TABLE pilot_feedback ADD COLUMN instructor_notes TEXT NOT NULL DEFAULT ''")
     if statements:
         with engine.begin() as connection:
             for statement in statements:

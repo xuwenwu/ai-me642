@@ -212,6 +212,33 @@ class AssistantPromptIn(BaseModel):
     prompt_text: str = Field(min_length=1)
 
 
+class PilotFeedbackIn(BaseModel):
+    category: str = Field(min_length=1, max_length=64)
+    severity: str = Field(min_length=1, max_length=64)
+    page_url: str = Field(default="", max_length=1000)
+    message: str = Field(min_length=1, max_length=5000)
+    contact_allowed: bool = False
+
+
+class PilotFeedbackUpdateIn(BaseModel):
+    status: str = Field(min_length=1, max_length=32)
+    instructor_notes: str = Field(default="", max_length=5000)
+
+
+class PilotFeedbackOut(PilotFeedbackIn):
+    id: int
+    user_id: int
+    user_email: str
+    user_full_name: str
+    role: str
+    status: str
+    instructor_notes: str = ""
+    resolved_by_id: int | None = None
+    resolved_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class SubmissionCreate(BaseModel):
     assignment_id: int
     project_id: int | None = None

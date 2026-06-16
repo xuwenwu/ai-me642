@@ -239,6 +239,28 @@ class PromptLogEntry(Base):
         return _json_list(self.privacy_flags_json, [])
 
 
+class PilotFeedback(Base):
+    __tablename__ = "pilot_feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    role: Mapped[str] = mapped_column(String(32), default="")
+    page_url: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(64), index=True)
+    severity: Mapped[str] = mapped_column(String(64), index=True)
+    message: Mapped[str] = mapped_column(Text)
+    contact_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(32), default="new", index=True)
+    instructor_notes: Mapped[str] = mapped_column(Text, default="")
+    resolved_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+    user = relationship("User", foreign_keys=[user_id])
+    resolved_by = relationship("User", foreign_keys=[resolved_by_id])
+
+
 class Submission(Base):
     __tablename__ = "submissions"
     __table_args__ = (UniqueConstraint("assignment_id", "user_id", name="uq_submission_assignment_user"),)

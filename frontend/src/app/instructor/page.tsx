@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { api, download } from '@/lib/api';
-import type { AIPolicy, AIProviderReadiness, Assignment, InstructorAnalytics, PromptTemplate, RosterStudent } from '@/lib/types';
+import type { AIPolicy, AIProviderReadiness, Assignment, InstructorAnalytics, PilotFeedback, PromptTemplate, RosterStudent } from '@/lib/types';
 
 type LaunchCheck = {
   title: string;
@@ -32,6 +32,7 @@ export default function InstructorOverviewPage() {
   const [policy, setPolicy] = useState<AIPolicy | null>(null);
   const [aiReadiness, setAiReadiness] = useState<AIProviderReadiness | null>(null);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [feedback, setFeedback] = useState<PilotFeedback[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -42,14 +43,16 @@ export default function InstructorOverviewPage() {
       api<AIPolicy>('/instructor/ai-policy'),
       api<AIProviderReadiness>('/instructor/ai-policy/readiness'),
       api<PromptTemplate[]>('/instructor/prompt-templates'),
+      api<PilotFeedback[]>('/instructor/feedback?status=all'),
     ])
-      .then(([a, r, assignmentList, aiPolicy, readiness, promptTemplates]) => {
+      .then(([a, r, assignmentList, aiPolicy, readiness, promptTemplates, feedbackItems]) => {
         setAnalytics(a);
         setRoster(r);
         setAssignments(assignmentList);
         setPolicy(aiPolicy);
         setAiReadiness(readiness);
         setTemplates(promptTemplates);
+        setFeedback(feedbackItems);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load instructor overview'));
   }, []);
@@ -59,6 +62,12 @@ export default function InstructorOverviewPage() {
     warnings: roster.reduce((total, student) => total + student.warning_count, 0),
     graded: roster.reduce((total, student) => total + student.graded_count, 0),
   }), [roster]);
+
+  const feedbackTotals = useMemo(() => ({
+    newCount: feedback.filter((item) => item.status === 'new').length,
+    openCount: feedback.filter((item) => item.status === 'new' || item.status === 'reviewing').length,
+    blockingCount: feedback.filter((item) => item.severity === 'blocks_progress' && item.status !== 'resolved' && item.status !== 'dismissed').length,
+  }), [feedback]);
 
   const launchChecks = useMemo(() => {
     const publishedAssignments = assignments.filter((assignment) => assignment.status === 'published');
@@ -149,6 +158,7 @@ export default function InstructorOverviewPage() {
           <button className="secondary" onClick={() => download('/instructor/gradebook.csv', 'gradebook.csv')}>Download gradebook</button>
           <Link href="/instructor/gradebook">Gradebook dashboard</Link>
           <Link href="/instructor/setup">Course setup</Link>
+          <Link href="/instructor/feedback">Pilot feedback</Link>
           <Link href="/instructor/submissions">Open review queue</Link>
         </div>
       </div>
@@ -201,6 +211,18 @@ export default function InstructorOverviewPage() {
               <div className="summary-item"><span>Graded</span><strong>{analytics.graded_count}</strong></div>
               <div className="summary-item"><span>AI Disclosure</span><strong>{analytics.ai_disclosure_missing_count}</strong></div>
               <div className="summary-item"><span>Attention</span><strong>{analytics.needs_attention_count}</strong></div>
+              <div className="summary-item"><span>Feedback</span><strong>{feedbackTotals.openCount}</strong></div>
+              <div className="summary-item"><span>Blocking</span><strong>{feedbackTotals.blockingCount}</strong></div>
+            </div>
+          </section>
+
+          <section className="card" style={{ marginTop: '1rem' }}>
+            <div className="section-header">
+              <div>
+                <h2>Pilot Feedback Signals</h2>
+                <p className="muted">{feedbackTotals.newCount} new, {feedbackTotals.openCount} open, {feedbackTotals.blockingCount} blocking.</p>
+              </div>
+              <Link href="/instructor/feedback">Review feedback</Link>
             </div>
           </section>
 

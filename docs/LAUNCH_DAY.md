@@ -28,10 +28,12 @@ Use this checklist when starting the app for an actual class activity.
    - live assistant mode is enabled only if approved for the activity.
 7. Open Prompt Logs and verify the responsible-AI policy is visible.
 8. Open the student login page in a separate browser/profile and confirm one test student can reach Dashboard.
+9. Open Feedback and confirm students know where to report login, upload, validation, AI-guidance, or confusing-UI issues.
 
 ## During Class
 
 - Keep Instructor Overview open for launch status and attention counts.
+- Keep Pilot Feedback open or check it between work periods for blocking issues.
 - Use Instructor Review Queue for validation warnings, missing disclosure, and ungraded submitted work.
 - Treat validation output as evidence, not a grade.
 - If live AI guidance behaves unexpectedly, switch Course Setup -> AI Policy -> Provider to offline guidance.
@@ -50,7 +52,8 @@ Use this checklist when starting the app for an actual class activity.
    - LMS submission detail CSV,
    - roster CSV.
 3. Record incidents or confusing workflow points in `docs/course_pilot/PILOT_FEEDBACK.md`.
-4. Stop the stack only if the pilot should be offline:
+4. Export in-app pilot feedback from Instructor -> Pilot Feedback.
+5. Stop the stack only if the pilot should be offline:
 
 ```powershell
 .\scripts\pilot-stop.ps1 -Port 3000

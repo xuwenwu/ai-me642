@@ -31,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {!locked ? <Link href="/projects/new">Project Spec</Link> : null}
           {!locked ? <Link href="/prompt-logs">Prompt Logs</Link> : null}
           {!locked ? <Link href="/submissions">Submission</Link> : null}
+          {!locked ? <Link href="/feedback">Feedback</Link> : null}
           {ready && isStaff(user) && !locked ? <Link href="/instructor">Instructor</Link> : null}
           {ready && user ? <Link href="/account/password">Account</Link> : null}
           {ready && user ? <button className="secondary" onClick={logout}>Logout</button> : <Link href="/login">Login</Link>}

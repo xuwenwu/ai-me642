@@ -175,7 +175,8 @@ textarea {
 }
 
 .assignment-context,
-.prompt-cues {
+.prompt-cues,
+.assistant-test-panel {
   background: #f4f7f5;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -183,8 +184,14 @@ textarea {
 }
 
 .assignment-context p,
-.prompt-cues p {
+.prompt-cues p,
+.assistant-test-panel p {
   margin: 0.35rem 0 0;
+}
+
+.assistant-test-panel h3 {
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
 }
 
 .status {

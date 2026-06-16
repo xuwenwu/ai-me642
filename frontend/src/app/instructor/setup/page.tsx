@@ -409,12 +409,20 @@ export default function InstructorSetupPage() {
         <section className="card">
           <h2>AI Policy</h2>
           {aiReadiness ? (
-            <div className="assignment-context" style={{ marginBottom: '0.85rem' }}>
-              <div className="row">
-                <span className={`status ${aiReadiness.configured ? 'passed' : aiReadiness.provider_mode === 'offline' ? 'warning' : 'failed'}`}>
-                  {aiReadiness.provider_mode}
-                </span>
-                <strong>{aiReadiness.configured ? 'Ready' : 'Not ready'}</strong>
+            <div className="assistant-test-panel" style={{ marginBottom: '0.85rem' }}>
+              <div className="section-header">
+                <div>
+                  <h3>Live Assistant Test</h3>
+                  <div className="row">
+                    <span className={`status ${aiReadiness.configured ? 'passed' : aiReadiness.provider_mode === 'offline' ? 'warning' : 'failed'}`}>
+                      {aiReadiness.provider_mode}
+                    </span>
+                    <strong>{aiReadiness.configured ? 'Ready' : 'Not ready'}</strong>
+                  </div>
+                </div>
+                <button className="secondary" type="button" onClick={testAIProvider} disabled={aiTestBusy}>
+                  {aiTestBusy ? 'Testing...' : 'Run test'}
+                </button>
               </div>
               <p className="muted">{aiReadiness.message}</p>
               <div className="metric-grid compact">
@@ -422,9 +430,6 @@ export default function InstructorSetupPage() {
                 <div><span>Requests</span><strong>{aiReadiness.requests_used}/{aiReadiness.request_limit || '-'}</strong></div>
                 <div><span>Tokens</span><strong>{aiReadiness.tokens_estimated}/{aiReadiness.token_budget || '-'}</strong></div>
               </div>
-              <button className="secondary" type="button" onClick={testAIProvider} disabled={aiTestBusy}>
-                {aiTestBusy ? 'Testing...' : 'Test course assistant'}
-              </button>
               {aiTestResult ? (
                 <div className="success" style={{ marginTop: '0.85rem' }}>
                   <strong>{aiTestResult.provider_model}</strong>

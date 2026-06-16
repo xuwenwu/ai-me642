@@ -11,6 +11,7 @@ __pycache__/
 backend/data/uploads/
 backend/data/generated/
 backend/data/backups/
+pilot_backups/
 frontend/.next/
 frontend/node_modules/
 frontend/out/

@@ -176,7 +176,9 @@ For pilot review, also use `docs/PILOT_READINESS.md`.
 
 For deployment and security hardening, use `docs/DEPLOYMENT.md` and `docs/SECURITY_CHECKLIST.md`.
 
-For a stable small-class pilot deployment, use `docs/PILOT_OPERATIONS.md` with `docker-compose.pilot.yml`.
+For a stable small-class pilot deployment, use `docs/PILOT_OPERATIONS.md` with `docker-compose.pilot.yml` and the top-level `scripts/pilot-*.ps1` helpers.
+
+For launch day, use `docs/LAUNCH_DAY.md`.
 
 For course-facing pilot materials, use `docs/course_pilot/README.md`.
 

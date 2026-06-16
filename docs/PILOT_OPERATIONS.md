@@ -19,15 +19,14 @@ Copy-Item .env.pilot.example .env.pilot
 3. Build and start the pilot stack:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml --env-file .env.pilot up -d --build
+.\scripts\pilot-start.ps1 -Port 3000
 ```
 
 4. Confirm both services are healthy:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml ps
-Invoke-WebRequest http://127.0.0.1:3000/login -UseBasicParsing
-Invoke-WebRequest http://127.0.0.1:3000/api/health/ready -UseBasicParsing
+.\scripts\pilot-status.ps1 -Port 3000
+.\scripts\pilot-smoke.ps1 -Port 3000
 ```
 
 5. Put HTTPS in front of `127.0.0.1:3000` with the hosting provider or reverse proxy. The backend stays private inside the Compose network.
@@ -56,8 +55,8 @@ The current app does not include self-service password reset. Keep a manual pass
 Run these checks before each class activity:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml ps
-Invoke-WebRequest https://your-course-domain.example.edu/api/health/ready -UseBasicParsing
+.\scripts\pilot-status.ps1 -Port 3000
+.\scripts\pilot-smoke.ps1 -Port 3000 -InstructorEmail instructor@your.edu -InstructorPassword "temporary-password"
 ```
 
 Expected readiness response:
@@ -79,10 +78,10 @@ Also confirm:
 For the Compose pilot, SQLite, uploads, and generated backup ZIP files live in the `ai_me642_data` Docker volume. Take a backup before and after each class activity:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml exec backend python scripts/backup_local_data.py
+.\scripts\pilot-backup.ps1 -Port 3000
 ```
 
-Copy the generated ZIP from `/data/backups` or use provider-level volume snapshots. Store backups outside the deployment host.
+The script runs the backend backup helper and copies the newest ZIP from the Docker volume to `pilot_backups/`. Store backups outside the deployment host.
 
 ## Upgrade Procedure
 
@@ -92,13 +91,13 @@ Copy the generated ZIP from `/data/backups` or use provider-level volume snapsho
 4. Rebuild and restart:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml --env-file .env.pilot up -d --build
+.\scripts\pilot-start.ps1 -Port 3000
 ```
 
 5. Check readiness:
 
 ```powershell
-Invoke-WebRequest https://your-course-domain.example.edu/api/health/ready -UseBasicParsing
+.\scripts\pilot-status.ps1 -Port 3000
 ```
 
 6. Smoke test one student login and one instructor review page.
@@ -108,7 +107,7 @@ Invoke-WebRequest https://your-course-domain.example.edu/api/health/ready -UseBa
 1. Stop the current stack:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml down
+.\scripts\pilot-stop.ps1 -Port 3000 -RemoveContainers
 ```
 
 2. Check out the last known good commit.
@@ -160,3 +159,5 @@ Then document:
 - Validation failure/warning patterns.
 - Instructor grading time and pain points.
 - Any login, upload, or deployment incidents.
+
+For the class-day checklist, use `docs/LAUNCH_DAY.md`.

@@ -64,24 +64,32 @@ cd backend
 
 ## Deployment Checks
 
-1. Confirm `.github/workflows/ci.yml` exists.
+1. Confirm `.github/workflows/ci.yml` exists and that GitHub checks are passing on the PR.
 2. Confirm `.env.production.example` includes `APP_ENV=production`, `SEED_DEMO_DATA=false`, and non-wildcard `CORS_ORIGINS`.
 3. Confirm `.env.pilot.example`, `docker-compose.pilot.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` exist.
 4. Confirm `docker-compose.hosted.yml` and `Caddyfile.example` exist for hosted HTTPS deployment.
 5. Confirm `/api/health/ready` returns database and upload-root readiness.
-6. Read `docs/DEPLOYMENT.md`.
-7. Read `docs/PILOT_OPERATIONS.md`.
-8. Read `docs/DATA_RETENTION.md`.
-9. Read `docs/SECURITY_CHECKLIST.md`.
-10. Read `docs/course_pilot/README.md` and confirm the instructor/student materials match the pilot assignment.
-11. For a local backup dry run, use:
+6. Confirm the Instructor Overview **Pilot Launch Checklist** is ready or any review items are understood.
+7. Read `docs/DEPLOYMENT.md`.
+8. Read `docs/PILOT_OPERATIONS.md`.
+9. Read `docs/LAUNCH_DAY.md`.
+10. Read `docs/DATA_RETENTION.md`.
+11. Read `docs/SECURITY_CHECKLIST.md`.
+12. Read `docs/course_pilot/README.md` and confirm the instructor/student materials match the pilot assignment.
+13. For a Docker pilot smoke check, use:
 
 ```powershell
-cd backend
-.\.venv\Scripts\python.exe scripts\backup_local_data.py
+.\scripts\pilot-status.ps1 -Port 3000
+.\scripts\pilot-smoke.ps1 -Port 3000
 ```
 
-12. For a local archive dry run, use:
+14. For a local backup dry run, use:
+
+```powershell
+.\scripts\pilot-backup.ps1 -Port 3000
+```
+
+15. For a local archive dry run, use:
 
 ```powershell
 cd backend

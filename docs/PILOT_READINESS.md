@@ -12,22 +12,47 @@ Use this checklist when reviewing the app for a small real-class pilot.
 3. Open Submission Workflow.
 4. Create one submission for each lab.
 5. Confirm each selected lab shows its validation profile, required evidence, optional evidence, and reflection cues.
-6. Upload `sample_input.in` and `sample_good_nve.log` from `sample_data` for Lab 3.
-7. Run validation and confirm thermo plots, interpretation notes, and validation checks appear.
-8. Save a student interpretation and submit the package.
+6. Open AI Prompt Logs and confirm the course AI policy, allowed tools, disclosure checklist, and prompt templates appear.
+7. Choose a template, save a prompt log connected to Lab 3, and confirm it appears in Recorded Logs.
+8. Upload `sample_input.in`, `sample_good_nve.log`, `sample_slurm.sbatch`, `sample_analysis.py`, and `sample_ovito.py` from `sample_data` for Lab 3.
+9. Optionally upload `sample_warning.log` as a second `lammps_log` to review multi-log comparison.
+10. Run validation and confirm thermo plots, interpretation notes, validation checks, and the AI Disclosure cue appear.
+11. Confirm Phase VI checks appear for LAMMPS input structure, Slurm directives/resources/launch safety, Python analysis structure/safety, OVITO script structure/safety, and multi-log comparison when two logs are present.
+12. Save a student interpretation and submit the package.
 
 ## Instructor Flow
 
 1. Sign in as `instructor@example.edu` or `ta@example.edu`.
 2. Open Instructor Overview.
 3. Confirm assignment analytics, needs-attention rows, and roster readiness appear.
-4. Open Instructor Review.
-5. Use the assignment, submission status, validation status, grade state, and search filters.
-6. Select the submitted Lab 3 package.
-7. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
-8. Enter rubric scores and save a grade.
-9. Confirm the grade-save message appears beside the rubric form.
-10. Download `gradebook.csv` and confirm the submission row includes validation, section, and grade values.
+4. Open Course Setup.
+5. Confirm seeded assignments are editable and roster rows are visible.
+6. Confirm the AI policy and prompt templates can be edited.
+7. Confirm the Course Assistant is disabled by default, then enable offline mode for a test prompt if reviewing Phase X.
+8. Create or edit a test assignment, then confirm it appears in the student assignment list if its status is `published`.
+9. Add one test student, import a small CSV with `full_name,email,section`, and download `roster_export.csv`.
+10. Confirm roster account status appears, then reset a test student password and require a password change.
+11. Confirm deactivating a test student blocks login, then reactivate the account.
+12. Open Instructor Review.
+13. Use the assignment, submission status, validation status, grade state, and search filters.
+14. Select the submitted Lab 3 package.
+15. Confirm assignment-aware evidence, thermo plots, interpretation notes, files, and student interpretation are visible.
+16. Enter rubric scores and save a grade.
+17. Confirm the grade-save message appears beside the rubric form.
+18. Open Gradebook Dashboard.
+19. Confirm course totals, assignment operations, and student gradebook rows appear.
+20. Download `course_gradebook.csv` and confirm missing/submitted/graded cells are included.
+21. Download `canvas_gradebook_import.csv` and confirm it has one row per student with Canvas identity columns and assignment score columns.
+22. Download `lms_submission_detail.csv` and confirm it includes student, section, assignment, score, status, validation status, submitted time, and feedback fields.
+
+## Account Flow
+
+1. Create a test student with a temporary password and required password change.
+2. Sign in as the test student.
+3. Confirm the app redirects to Account / Change Password.
+4. Change the password.
+5. Confirm Dashboard and student workflows become available.
+6. Sign in with the old temporary password and confirm it no longer works.
 
 ## Backend Checks
 
@@ -35,6 +60,31 @@ Use this checklist when reviewing the app for a small real-class pilot.
 cd backend
 .\.venv\Scripts\python.exe scripts\reset_demo_data.py
 .\.venv\Scripts\python.exe -m pytest
+```
+
+## Deployment Checks
+
+1. Confirm `.github/workflows/ci.yml` exists.
+2. Confirm `.env.production.example` includes `APP_ENV=production`, `SEED_DEMO_DATA=false`, and non-wildcard `CORS_ORIGINS`.
+3. Confirm `.env.pilot.example`, `docker-compose.pilot.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` exist.
+4. Confirm `docker-compose.hosted.yml` and `Caddyfile.example` exist for hosted HTTPS deployment.
+5. Confirm `/api/health/ready` returns database and upload-root readiness.
+6. Read `docs/DEPLOYMENT.md`.
+7. Read `docs/PILOT_OPERATIONS.md`.
+8. Read `docs/DATA_RETENTION.md`.
+9. Read `docs/SECURITY_CHECKLIST.md`.
+10. For a local backup dry run, use:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\backup_local_data.py
+```
+
+11. For a local archive dry run, use:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\archive_course_data.py
 ```
 
 ## Frontend Checks
@@ -49,6 +99,10 @@ npm run build
 
 - The app does not run uploaded simulation code.
 - Automated validation is advisory evidence, not a grade.
-- No live LLM calls are made.
-- Canvas, sections, TA assignment, and cohort analytics remain future work.
-- Canvas, TA assignment, and richer AI-disclosure analytics remain future work.
+- No live LLM calls are made unless both instructor policy and server environment explicitly enable an external provider.
+- AI-disclosure analytics flag missing or thin evidence but do not score students automatically.
+- Phase VI validation statically inspects uploaded scripts; it does not execute LAMMPS, Python, OVITO, or Slurm.
+- Canvas export is a CSV handoff, not a live Canvas API integration.
+- Production deployment still requires instructor-controlled hosting, HTTPS, backups, and real course secrets.
+- Controlled AI external provider mode still requires institutional/privacy review and API billing ownership.
+- Temporary phone tunnels are review tools only, not class-pilot hosting.

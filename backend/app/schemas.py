@@ -10,6 +10,8 @@ class UserOut(BaseModel):
     email: str
     full_name: str
     role: str
+    is_active: bool = True
+    must_change_password: bool = False
 
 
 class LoginIn(BaseModel):
@@ -21,6 +23,21 @@ class AuthOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=10)
+
+
+class ResetPasswordIn(BaseModel):
+    new_password: str = Field(min_length=10)
+    must_change_password: bool = True
+
+
+class AccountStatusIn(BaseModel):
+    is_active: bool
+    must_change_password: bool = False
 
 
 class RubricCriterionOut(BaseModel):
@@ -49,6 +66,20 @@ class AssignmentOut(BaseModel):
     validation_settings: dict = Field(default_factory=dict)
     interpretation_prompts: list[str] = Field(default_factory=list)
     criteria: list[RubricCriterionOut] = Field(default_factory=list)
+
+
+class AssignmentManageIn(BaseModel):
+    title: str = Field(min_length=1)
+    description: str = ""
+    assignment_type: str = "lab"
+    due_date: str | None = None
+    total_points: float = 100
+    status: str = "published"
+    validation_profile: str = "lammps_basic_health"
+    required_file_types: list[str] = Field(default_factory=lambda: ["lammps_input", "lammps_log"])
+    optional_file_types: list[str] = Field(default_factory=list)
+    validation_settings: dict = Field(default_factory=dict)
+    interpretation_prompts: list[str] = Field(default_factory=list)
 
 
 class ProjectSpecIn(BaseModel):
@@ -92,6 +123,10 @@ class PromptLogIn(BaseModel):
     manual_edits: str = ""
     validation_performed: str = ""
     remaining_concerns: str = ""
+    provider_status: str = "manual"
+    provider_model: str = ""
+    provider_response_id: str = ""
+    privacy_flags: list[str] = Field(default_factory=list)
 
 
 class PromptLogOut(PromptLogIn):
@@ -100,6 +135,75 @@ class PromptLogOut(PromptLogIn):
     id: int
     user_id: int
     created_at: datetime
+
+
+class AIPolicyIn(BaseModel):
+    title: str = Field(min_length=1)
+    body: str = ""
+    allowed_tools: list[str] = Field(default_factory=list)
+    disclosure_requirements: list[str] = Field(default_factory=list)
+    assistant_enabled: bool = False
+    assistant_provider: str = "offline"
+    assistant_model: str = ""
+    assistant_system_prompt: str = ""
+    assistant_retention_days: int = 180
+
+
+class AIPolicyOut(AIPolicyIn):
+    id: int
+    course_id: int
+    updated_at: datetime
+
+
+class AIProviderReadinessOut(BaseModel):
+    provider_enabled: bool
+    provider_mode: str
+    configured: bool
+    model: str
+    request_limit: int
+    requests_used: int
+    token_budget: int
+    tokens_estimated: int
+    remaining_requests: int
+    remaining_tokens: int
+    message: str
+
+
+class AIProviderTestIn(BaseModel):
+    prompt_text: str = "Help a ME642 student plan validation checks for a LAMMPS NVE energy-conservation submission."
+    task_type: str = "lammps_debugging"
+
+
+class AIProviderTestOut(BaseModel):
+    status: str
+    provider_status: str
+    provider_model: str
+    output_summary: str
+    privacy_flags: list[str] = Field(default_factory=list)
+    readiness: AIProviderReadinessOut
+
+
+class PromptTemplateIn(BaseModel):
+    title: str = Field(min_length=1)
+    task_type: str = "lammps_debugging"
+    prompt_text: str = ""
+    checklist: list[str] = Field(default_factory=list)
+    status: str = "active"
+
+
+class PromptTemplateOut(PromptTemplateIn):
+    id: int
+    course_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AssistantPromptIn(BaseModel):
+    title: str = Field(min_length=1)
+    assignment_id: int | None = None
+    project_id: int | None = None
+    task_type: str = "lammps_debugging"
+    prompt_text: str = Field(min_length=1)
 
 
 class SubmissionCreate(BaseModel):
@@ -235,6 +339,7 @@ class AssignmentAnalyticsOut(BaseModel):
     validation_not_run_count: int
     validation_warning_count: int
     validation_failed_count: int
+    ai_disclosure_missing_count: int
     graded_count: int
     ungraded_submitted_count: int
     needs_attention_count: int
@@ -261,8 +366,61 @@ class InstructorAnalyticsOut(BaseModel):
     submitted_count: int
     graded_count: int
     needs_attention_count: int
+    ai_disclosure_missing_count: int
     assignments: list[AssignmentAnalyticsOut] = Field(default_factory=list)
     needs_attention: list[NeedsAttentionOut] = Field(default_factory=list)
+
+
+class GradebookCellOut(BaseModel):
+    assignment_id: int
+    assignment_title: str
+    total_points: float
+    submission_id: int | None = None
+    submission_status: str = "missing"
+    validation_status: str = "missing"
+    grade_state: str = "missing"
+    final_score: float | None = None
+    submitted_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class GradebookStudentOut(BaseModel):
+    student_id: int
+    full_name: str
+    email: str
+    section: str
+    submitted_count: int
+    graded_count: int
+    missing_count: int
+    warning_count: int
+    current_score: float
+    possible_score: float
+    assignments: list[GradebookCellOut] = Field(default_factory=list)
+
+
+class GradebookAssignmentSummaryOut(BaseModel):
+    assignment_id: int
+    title: str
+    due_date: str | None
+    total_points: float
+    submitted_count: int
+    graded_count: int
+    ungraded_count: int
+    missing_count: int
+    warning_count: int
+    failed_count: int
+    average_score: float | None = None
+
+
+class GradebookOut(BaseModel):
+    total_students: int
+    total_assignments: int
+    total_submitted: int
+    total_graded: int
+    total_missing: int
+    current_average_score: float | None = None
+    assignments: list[GradebookAssignmentSummaryOut] = Field(default_factory=list)
+    students: list[GradebookStudentOut] = Field(default_factory=list)
 
 
 class RosterStudentOut(BaseModel):
@@ -270,9 +428,41 @@ class RosterStudentOut(BaseModel):
     full_name: str
     email: str
     section: str
+    is_active: bool
+    must_change_password: bool
+    account_status: str
     total_assignments: int
     submissions_count: int
     submitted_count: int
     graded_count: int
     warning_count: int
     missing_count: int
+
+
+class RosterStudentIn(BaseModel):
+    full_name: str = Field(min_length=1)
+    email: str = Field(min_length=3)
+    section: str = "Pilot Section A"
+    password: str = "password123"
+    is_active: bool = True
+    must_change_password: bool = True
+
+
+class RosterImportIn(BaseModel):
+    csv_text: str = Field(min_length=1)
+    default_section: str = "Pilot Section A"
+
+
+class RosterImportOut(BaseModel):
+    created_count: int
+    updated_count: int
+    skipped_count: int
+    errors: list[str] = Field(default_factory=list)
+
+
+class CanvasStatusOut(BaseModel):
+    enabled: bool
+    configured: bool
+    base_url: str = ""
+    course_id: str = ""
+    message: str

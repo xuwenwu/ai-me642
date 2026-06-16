@@ -57,6 +57,15 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert assignment["interpretation_prompts"]
             assignment_id = assignment["id"]
 
+            public_policy = client.get("/api/prompt-logs/policy", headers=student_headers)
+            assert public_policy.status_code == 200
+            assert public_policy.json()["disclosure_requirements"]
+            assert "Responsible AI" in public_policy.json()["title"]
+
+            public_templates = client.get("/api/prompt-logs/templates", headers=student_headers)
+            assert public_templates.status_code == 200
+            assert any(item["task_type"] == "lammps_debugging" for item in public_templates.json())
+
             project = client.post(
                 "/api/projects",
                 headers=student_headers,
@@ -91,6 +100,20 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
                 },
             )
             assert prompt_log.status_code == 200
+            assert prompt_log.json()["provider_status"] == "manual"
+
+            disabled_assistant = client.post(
+                "/api/prompt-logs/assistant",
+                headers=student_headers,
+                json={
+                    "title": "Disabled assistant check",
+                    "assignment_id": assignment_id,
+                    "project_id": project_id,
+                    "task_type": "lammps_debugging",
+                    "prompt_text": "Help me plan validation checks for this NVE log.",
+                },
+            )
+            assert disabled_assistant.status_code == 403
 
             submission = client.post(
                 "/api/submissions",
@@ -107,6 +130,9 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             for file_type, filename in [
                 ("lammps_input", "sample_input.in"),
                 ("lammps_log", "sample_good_nve.log"),
+                ("slurm_script", "sample_slurm.sbatch"),
+                ("python_analysis", "sample_analysis.py"),
+                ("ovito_script", "sample_ovito.py"),
             ]:
                 with (ROOT / "sample_data" / filename).open("rb") as handle:
                     upload = client.post(
@@ -122,6 +148,9 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert validation_body["status"] == "warning"
             assert not [check for check in validation_body["checks"] if check["status"] == "failed"]
             assert any(check["check_type"] == "energy_drift" for check in validation_body["checks"])
+            assert any(check["check_type"] == "slurm_directives" for check in validation_body["checks"])
+            assert any(check["check_type"] == "python_analysis_structure" for check in validation_body["checks"])
+            assert any(check["check_type"] == "ovito_script_structure" for check in validation_body["checks"])
             assert validation_body["thermo_series"]
             assert "TotEng" in validation_body["thermo_series"][0]["columns"]
             assert validation_body["interpretation_notes"]
@@ -168,9 +197,11 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             analytics_body = analytics.json()
             lab3_summary = next(item for item in analytics_body["assignments"] if item["assignment_id"] == assignment_id)
             assert analytics_body["total_students"] == 2
+            assert analytics_body["ai_disclosure_missing_count"] >= 0
             assert lab3_summary["submitted_count"] == 1
             assert lab3_summary["missing_count"] == 1
             assert lab3_summary["validation_warning_count"] == 1
+            assert lab3_summary["ai_disclosure_missing_count"] == 0
             assert lab3_summary["ungraded_submitted_count"] == 1
             assert analytics_body["needs_attention"]
 
@@ -178,6 +209,149 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert roster.status_code == 200
             assert {student["email"] for student in roster.json()} == {"student@example.edu", "student2@example.edu"}
             assert all(student["section"] == "Pilot Section A" for student in roster.json())
+
+            managed_assignment = client.post(
+                "/api/instructor/assignments",
+                headers=instructor_headers,
+                json={
+                    "title": "Lab 4: Phase IV Authoring Smoke",
+                    "description": "Instructor-authored assignment from the smoke test.",
+                    "assignment_type": "lab",
+                    "due_date": "2026-03-17",
+                    "total_points": 50,
+                    "status": "published",
+                    "validation_profile": "lammps_basic_health",
+                    "required_file_types": ["lammps_input", "lammps_log"],
+                    "optional_file_types": ["readme", "prompt_log"],
+                    "validation_settings": {},
+                    "interpretation_prompts": ["What changed after instructor setup?"],
+                },
+            )
+            assert managed_assignment.status_code == 200
+            managed_body = managed_assignment.json()
+            assert managed_body["title"] == "Lab 4: Phase IV Authoring Smoke"
+            assert managed_body["criteria"]
+
+            edited_assignment = client.patch(
+                f"/api/instructor/assignments/{managed_body['id']}",
+                headers=instructor_headers,
+                json={**managed_body, "title": "Lab 4: Edited Authoring Smoke", "optional_file_types": ["readme", "figure"]},
+            )
+            assert edited_assignment.status_code == 200
+            assert edited_assignment.json()["title"] == "Lab 4: Edited Authoring Smoke"
+            assert edited_assignment.json()["optional_file_types"] == ["readme", "figure"]
+
+            visible_assignments = client.get("/api/assignments", headers=student_headers)
+            assert visible_assignments.status_code == 200
+            assert any(item["title"] == "Lab 4: Edited Authoring Smoke" for item in visible_assignments.json())
+
+            instructor_policy = client.get("/api/instructor/ai-policy", headers=instructor_headers)
+            assert instructor_policy.status_code == 200
+            policy_payload = instructor_policy.json()
+            readiness = client.get("/api/instructor/ai-policy/readiness", headers=instructor_headers)
+            assert readiness.status_code == 200
+            assert readiness.json()["provider_mode"] == "offline"
+            assert readiness.json()["configured"] is True
+            assert readiness.json()["remaining_requests"] >= 0
+
+            private_assistant_test = client.post(
+                "/api/instructor/ai-policy/test",
+                headers=instructor_headers,
+                json={"task_type": "lammps_debugging", "prompt_text": "Plan cautious validation checks for an NVE LAMMPS log."},
+            )
+            assert private_assistant_test.status_code == 200
+            assert private_assistant_test.json()["provider_status"] == "generated_offline"
+            assert private_assistant_test.json()["readiness"]["provider_mode"] == "offline"
+
+            edited_policy = client.patch(
+                "/api/instructor/ai-policy",
+                headers=instructor_headers,
+                json={
+                    **policy_payload,
+                    "body": policy_payload["body"] + " Smoke-test policy update.",
+                    "allowed_tools": policy_payload["allowed_tools"] + ["ME642 Test Assistant"],
+                    "assistant_enabled": True,
+                    "assistant_provider": "offline",
+                    "assistant_model": "",
+                    "assistant_system_prompt": policy_payload["assistant_system_prompt"],
+                    "assistant_retention_days": 180,
+                },
+            )
+            assert edited_policy.status_code == 200
+            assert "Smoke-test policy update" in edited_policy.json()["body"]
+            assert edited_policy.json()["assistant_enabled"] is True
+
+            assistant_log = client.post(
+                "/api/prompt-logs/assistant",
+                headers=student_headers,
+                json={
+                    "title": "Offline assistant guidance",
+                    "assignment_id": assignment_id,
+                    "project_id": project_id,
+                    "task_type": "lammps_debugging",
+                    "prompt_text": "Help me plan validation checks for student@example.edu and this NVE log.",
+                },
+            )
+            assert assistant_log.status_code == 200
+            assistant_body = assistant_log.json()
+            assert assistant_body["provider_status"] == "generated_offline"
+            assert assistant_body["provider_model"] == "offline_course_guidance"
+            assert "Course assistant guidance" in assistant_body["ai_output_summary"]
+            assert "possible email address" in assistant_body["privacy_flags"]
+
+            managed_template = client.post(
+                "/api/instructor/prompt-templates",
+                headers=instructor_headers,
+                json={
+                    "title": "Smoke template",
+                    "task_type": "data_analysis",
+                    "prompt_text": "Help check evidence before interpreting data.",
+                    "checklist": ["Check units", "State uncertainty"],
+                    "status": "active",
+                },
+            )
+            assert managed_template.status_code == 200
+            edited_template = client.patch(
+                f"/api/instructor/prompt-templates/{managed_template.json()['id']}",
+                headers=instructor_headers,
+                json={**managed_template.json(), "title": "Edited smoke template"},
+            )
+            assert edited_template.status_code == 200
+            student_templates = client.get("/api/prompt-logs/templates", headers=student_headers)
+            assert any(item["title"] == "Edited smoke template" for item in student_templates.json())
+
+            roster_student = client.post(
+                "/api/instructor/roster/students",
+                headers=instructor_headers,
+                json={"full_name": "Katherine Student", "email": "student3@example.edu", "section": "Pilot Section B", "password": "password123"},
+            )
+            assert roster_student.status_code == 200
+            assert roster_student.json()["section"] == "Pilot Section B"
+
+            roster_import = client.post(
+                "/api/instructor/roster/import",
+                headers=instructor_headers,
+                json={"csv_text": "full_name,email,section\nNia Student,student4@example.edu,Pilot Section B\n", "default_section": "Pilot Section A"},
+            )
+            assert roster_import.status_code == 200
+            assert roster_import.json()["created_count"] == 1
+
+            roster_alias_import = client.post(
+                "/api/instructor/roster/import",
+                headers=instructor_headers,
+                json={
+                    "csv_text": "name,login_id,section\nAlias Student,student5@example.edu,Pilot Section C\nBad Email,not-an-email,Pilot Section C\n",
+                    "default_section": "Pilot Section A",
+                },
+            )
+            assert roster_alias_import.status_code == 200
+            assert roster_alias_import.json()["created_count"] == 1
+            assert roster_alias_import.json()["skipped_count"] == 1
+
+            roster_export = client.get("/api/instructor/roster.csv", headers=instructor_headers)
+            assert roster_export.status_code == 200
+            assert "sis_user_id" in roster_export.text
+            assert "student5@example.edu" in roster_export.text
 
             criteria = assignment["criteria"]
             grade = client.post(
@@ -202,6 +376,16 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert graded_lab3_summary["graded_count"] == 1
             assert graded_lab3_summary["ungraded_submitted_count"] == 0
 
+            gradebook_json = client.get("/api/instructor/gradebook", headers=instructor_headers)
+            assert gradebook_json.status_code == 200
+            gradebook_body = gradebook_json.json()
+            assert gradebook_body["total_students"] >= 2
+            assert gradebook_body["total_graded"] >= 1
+            student_row = next(item for item in gradebook_body["students"] if item["email"] == "student@example.edu")
+            lab3_cell = next(item for item in student_row["assignments"] if item["assignment_id"] == assignment_id)
+            assert lab3_cell["final_score"] == 100
+            assert lab3_cell["validation_status"] == "warning"
+
             gradebook = client.get(
                 f"/api/instructor/gradebook.csv?assignment_id={assignment_id}&grade_state=graded",
                 headers=instructor_headers,
@@ -210,6 +394,24 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             assert "student@example.edu" in gradebook.text
             assert "Pilot Section A" in gradebook.text
             assert "100.0" in gradebook.text
+
+            course_gradebook = client.get("/api/instructor/course-gradebook.csv", headers=instructor_headers)
+            assert course_gradebook.status_code == 200
+            assert "current_score" in course_gradebook.text
+            assert "student@example.edu" in course_gradebook.text
+
+            canvas_gradebook = client.get("/api/instructor/canvas-gradebook.csv", headers=instructor_headers)
+            assert canvas_gradebook.status_code == 200
+            assert "SIS User ID" in canvas_gradebook.text
+            assert "SIS Login ID" in canvas_gradebook.text
+            assert "Lab 3: NVE Energy Conservation and Timestep Stability (100)" in canvas_gradebook.text
+            assert "Automated smoke-test grade." not in canvas_gradebook.text
+
+            lms_detail = client.get(f"/api/instructor/lms-submission-detail.csv?assignment_id={assignment_id}", headers=instructor_headers)
+            assert lms_detail.status_code == 200
+            assert "Submission Status" in lms_detail.text
+            assert "Validation Status" in lms_detail.text
+            assert "Automated smoke-test grade." in lms_detail.text
     finally:
         app.dependency_overrides.pop(get_db, None)
         settings.upload_root = original_upload_root

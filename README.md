@@ -1,6 +1,6 @@
 # AI-ME642 Responsible Scientific Computing Studio
 
-AI-ME642 is a Phase II pilot-ready rebuild of the ME642 Materials Modeling Studio. It is a local-first teaching platform for responsible AI-assisted scientific computing in molecular dynamics coursework.
+AI-ME642 is a pilot-ready rebuild of the ME642 Materials Modeling Studio. It is a local-first teaching platform for responsible AI-assisted scientific computing in molecular dynamics coursework.
 
 The core evidence chain is:
 
@@ -8,30 +8,40 @@ The core evidence chain is:
 scientific specification -> AI prompt log -> simulation artifacts -> validation report -> student interpretation -> instructor grading -> reproducible ZIP package
 ```
 
-The Phase II pilot supports three assignment workflows with assignment-specific validation profiles and reflection prompts.
+The current pilot supports configurable assignment workflows with assignment-specific validation profiles, reflection prompts, responsible-AI policy/templates, controlled AI assistant logging, roster setup, instructor analytics, grading, gradebook exports, CI, and deployment guardrails.
 
 ## What This MVP Does
 
 - Seeded login for student, TA, and instructor roles.
-- One ME642 course and three seeded lab assignments with rubrics.
+- One ME642 course, three seeded demo lab assignments, and instructor assignment authoring.
 - Student project specification capture.
-- AI prompt-log disclosure with accepted/rejected/manual-edit fields.
+- AI prompt-log disclosure with accepted/rejected/manual-edit fields, course policy guidance, and reusable prompt templates.
+- Optional instructor-controlled course assistant for logged AI guidance, disabled by default and testable in offline mode.
+- Instructor-only AI provider readiness check, test prompt, and monthly external-call guardrails.
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.
+- Static LAMMPS input linting plus Slurm, Python analysis, and OVITO artifact checks without executing uploaded code.
+- Multi-log comparison when a submission includes more than one LAMMPS log.
 - Thermo plots for temperature, total energy, pressure, and volume when LAMMPS log columns are present.
 - Student reflection cues tied to each assignment.
-- Instructor/TA overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
-- CSV gradebook export.
-- Filter-aware gradebook export for instructor queues.
+- Instructor/TA course setup, responsible-AI policy/template editing, roster import, overview analytics, roster readiness, submission queue filters, evidence review, and rubric grading.
+- Account management with active/inactive status, required password changes, self-service password change, and instructor password reset.
+- AI-disclosure quality indicators for missing or thin prompt evidence.
+- Instructor/TA gradebook dashboard with roster-aware missing/submitted/graded status.
+- CSV gradebook export, filter-aware queue export, Canvas import CSV, LMS detail CSV, and roster CSV export.
+- Hosted HTTPS deployment templates, Canvas API status scaffolding, and course data archive tooling.
+- GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
+- Production environment guardrails, security headers, Docker pilot packaging, deployment docs, readiness checks, and local backup helper.
 - Reproducible ZIP package export.
 
 ## What This MVP Does Not Do
 
-- It does not call a live LLM.
+- It does not call a live LLM unless instructor policy and server environment explicitly enable an external provider.
 - It does not run uploaded LAMMPS, Python, or shell code.
+- It does not execute uploaded OVITO scripts or Slurm jobs.
 - It does not submit HPC jobs.
-- It does not integrate with Canvas yet.
+- It does not integrate with the live Canvas API yet.
 - It does not treat automated validation as a grade.
 
 ## Seed Accounts
@@ -142,6 +152,12 @@ The reset script refuses non-SQLite databases and only removes local ignored dat
 Follow `docs/SMOKE_TEST.md` to verify the student and instructor workflow before commits or larger changes.
 
 For pilot review, also use `docs/PILOT_READINESS.md`.
+
+For deployment and security hardening, use `docs/DEPLOYMENT.md` and `docs/SECURITY_CHECKLIST.md`.
+
+For a stable small-class pilot deployment, use `docs/PILOT_OPERATIONS.md` with `docker-compose.pilot.yml`.
+
+For controlled AI provider setup, use `docs/CONTROLLED_AI.md`.
 
 ## Design Principle
 

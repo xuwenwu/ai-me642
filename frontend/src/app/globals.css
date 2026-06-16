@@ -145,6 +145,25 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
+.check-panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding: 0.75rem;
+}
+
+.check-panel input {
+  margin-right: 0.4rem;
+  width: auto;
+}
+
+.check-panel legend {
+  color: var(--muted);
+  padding: 0 0.35rem;
+}
+
 .assignment-row {
   border-top: 1px solid var(--line);
   padding: 0.85rem 0;
@@ -245,6 +264,30 @@ table {
   margin-top: 0.2rem;
 }
 
+.metric-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  margin: 0.65rem 0;
+}
+
+.metric-grid div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.55rem;
+}
+
+.metric-grid span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.8rem;
+}
+
+.metric-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+}
+
 .evidence-list {
   display: flex;
   flex-wrap: wrap;
@@ -277,6 +320,20 @@ table {
   cursor: pointer;
   font-weight: 700;
   margin-bottom: 0.5rem;
+}
+
+.triage-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.triage-item {
+  align-items: start;
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: 1fr 1.2fr 1.4fr;
+  text-align: left;
 }
 
 td,

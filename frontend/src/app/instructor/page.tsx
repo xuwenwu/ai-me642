@@ -32,6 +32,8 @@ export default function InstructorOverviewPage() {
         <h1>Instructor Overview</h1>
         <div className="row">
           <button className="secondary" onClick={() => download('/instructor/gradebook.csv', 'gradebook.csv')}>Download gradebook</button>
+          <Link href="/instructor/gradebook">Gradebook dashboard</Link>
+          <Link href="/instructor/setup">Course setup</Link>
           <Link href="/instructor/submissions">Open review queue</Link>
         </div>
       </div>
@@ -45,6 +47,7 @@ export default function InstructorOverviewPage() {
               <div className="summary-item"><span>Submissions</span><strong>{analytics.total_submissions}</strong></div>
               <div className="summary-item"><span>Submitted</span><strong>{analytics.submitted_count}</strong></div>
               <div className="summary-item"><span>Graded</span><strong>{analytics.graded_count}</strong></div>
+              <div className="summary-item"><span>AI Disclosure</span><strong>{analytics.ai_disclosure_missing_count}</strong></div>
               <div className="summary-item"><span>Attention</span><strong>{analytics.needs_attention_count}</strong></div>
             </div>
           </section>
@@ -58,6 +61,7 @@ export default function InstructorOverviewPage() {
                   <th>Submitted</th>
                   <th>Missing</th>
                   <th>Validation</th>
+                  <th>AI Disclosure</th>
                   <th>Grading</th>
                   <th>Attention</th>
                 </tr>
@@ -74,6 +78,7 @@ export default function InstructorOverviewPage() {
                     <td>
                       {assignment.validation_warning_count} warning, {assignment.validation_failed_count} failed, {assignment.validation_not_run_count} not run
                     </td>
+                    <td>{assignment.ai_disclosure_missing_count} missing/thin</td>
                     <td>{assignment.graded_count} graded, {assignment.ungraded_submitted_count} submitted ungraded</td>
                     <td><span className={assignment.needs_attention_count ? 'status warning' : 'status passed'}>{assignment.needs_attention_count}</span></td>
                   </tr>

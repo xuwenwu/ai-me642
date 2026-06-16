@@ -7,8 +7,8 @@ export function InterpretationNotes({ notes }: { notes: InterpretationNote[] }) 
     <section className="interpretation-notes">
       <h3>Interpretation Cues</h3>
       <div className="note-list">
-        {notes.map((note) => (
-          <article key={`${note.topic}-${note.evidence}`} className={`note-card ${note.status}`}>
+        {notes.map((note, index) => (
+          <article key={`${note.topic}-${note.evidence}-${index}`} className={`note-card ${note.status}`}>
             <div className="note-heading">
               <strong>{note.topic}</strong>
               <span>{note.status.replace('_', ' ')}</span>

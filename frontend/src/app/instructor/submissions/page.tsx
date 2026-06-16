@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { InterpretationNotes } from '@/components/InterpretationNotes';
 import { ThermoPlots } from '@/components/ThermoPlots';
 import { EvidenceChecklist, ValidationSummary } from '@/components/ValidationSummary';
 import { api, download } from '@/lib/api';
-import type { Assignment, Submission } from '@/lib/types';
+import type { Assignment, InstructorAnalytics, NeedsAttention, Submission } from '@/lib/types';
 
 export default function InstructorSubmissionsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -24,6 +25,7 @@ export default function InstructorSubmissionsPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [gradeMessage, setGradeMessage] = useState('');
+  const [needsAttention, setNeedsAttention] = useState<NeedsAttention[]>([]);
 
   const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
   const filteredSubmissions = useMemo(() => {
@@ -63,9 +65,14 @@ export default function InstructorSubmissionsPage() {
   }, [assignmentFilter, gradeFilter, statusFilter, validationFilter]);
 
   async function load() {
-    const [a, s] = await Promise.all([api<Assignment[]>('/assignments'), api<Submission[]>('/instructor/submissions')]);
+    const [a, s, analytics] = await Promise.all([
+      api<Assignment[]>('/assignments'),
+      api<Submission[]>('/instructor/submissions'),
+      api<InstructorAnalytics>('/instructor/analytics'),
+    ]);
     setAssignments(a);
     setSubmissions(s);
+    setNeedsAttention(analytics.needs_attention);
     if (!selectedId && s[0]) setSelectedId(s[0].id);
   }
 
@@ -109,7 +116,13 @@ export default function InstructorSubmissionsPage() {
 
   return (
     <AppShell>
-      <h1>Instructor Review</h1>
+      <div className="section-header">
+        <h1>Instructor Review</h1>
+        <div className="row">
+          <Link href="/instructor">Instructor overview</Link>
+          <Link href="/instructor/gradebook">Gradebook dashboard</Link>
+        </div>
+      </div>
       {error ? <div className="error">{error}</div> : null}
       {message ? <div className="success">{message}</div> : null}
       <section className="card">
@@ -119,6 +132,25 @@ export default function InstructorSubmissionsPage() {
           <div className="summary-item"><span>Needs grading</span><strong>{needsGradingCount}</strong></div>
           <div className="summary-item"><span>Warnings</span><strong>{warningCount}</strong></div>
         </div>
+        {needsAttention.length ? (
+          <div className="assignment-context" style={{ marginBottom: '0.85rem' }}>
+            <strong>Needs Attention</strong>
+            <div className="triage-list">
+              {needsAttention.slice(0, 8).map((item) => (
+                <button
+                  className="secondary triage-item"
+                  key={item.submission_id}
+                  type="button"
+                  onClick={() => setSelectedId(item.submission_id)}
+                >
+                  <span>{item.student_name}</span>
+                  <span>{item.assignment_title}</span>
+                  <span>{item.reasons.join(', ')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="filter-grid">
           <label>Assignment<select value={assignmentFilter} onChange={(e) => setAssignmentFilter(e.target.value)}>
             <option value="all">All assignments</option>

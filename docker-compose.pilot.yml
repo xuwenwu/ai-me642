@@ -1,0 +1,52 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - .env.pilot
+    volumes:
+      - ai_me642_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_PROXY_URL: http://backend:8000
+        NEXT_PUBLIC_API_URL: /api
+    environment:
+      BACKEND_PROXY_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: /api
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then((r)=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  ai_me642_data:

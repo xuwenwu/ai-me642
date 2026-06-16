@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import UTC, datetime
 import json
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
@@ -18,6 +18,9 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(32), index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    password_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
@@ -60,6 +63,59 @@ class Enrollment(Base):
     user = relationship("User")
 
 
+class AIPolicy(Base):
+    __tablename__ = "ai_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), unique=True)
+    title: Mapped[str] = mapped_column(String(255), default="Responsible AI Use Policy")
+    body: Mapped[str] = mapped_column(Text, default="")
+    allowed_tools_json: Mapped[str] = mapped_column(Text, default="[]")
+    disclosure_requirements_json: Mapped[str] = mapped_column(Text, default="[]")
+    assistant_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    assistant_provider: Mapped[str] = mapped_column(String(64), default="offline")
+    assistant_model: Mapped[str] = mapped_column(String(128), default="")
+    assistant_system_prompt: Mapped[str] = mapped_column(
+        Text,
+        default=(
+            "You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and "
+            "interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims."
+        ),
+    )
+    assistant_retention_days: Mapped[int] = mapped_column(Integer, default=180)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+    course = relationship("Course")
+
+    @property
+    def allowed_tools(self) -> list[str]:
+        return _json_list(self.allowed_tools_json, [])
+
+    @property
+    def disclosure_requirements(self) -> list[str]:
+        return _json_list(self.disclosure_requirements_json, [])
+
+
+class PromptTemplate(Base):
+    __tablename__ = "prompt_templates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    title: Mapped[str] = mapped_column(String(255))
+    task_type: Mapped[str] = mapped_column(String(64), default="lammps_debugging")
+    prompt_text: Mapped[str] = mapped_column(Text, default="")
+    checklist_json: Mapped[str] = mapped_column(Text, default="[]")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+    course = relationship("Course")
+
+    @property
+    def checklist(self) -> list[str]:
+        return _json_list(self.checklist_json, [])
+
+
 class Assignment(Base):
     __tablename__ = "assignments"
 
@@ -73,7 +129,7 @@ class Assignment(Base):
     status: Mapped[str] = mapped_column(String(32), default="published")
     validation_profile: Mapped[str] = mapped_column(String(64), default="lammps_basic_health")
     required_file_types_json: Mapped[str] = mapped_column(Text, default='["lammps_input", "lammps_log"]')
-    optional_file_types_json: Mapped[str] = mapped_column(Text, default='["readme", "prompt_log", "python_analysis", "ovito_script", "figure"]')
+    optional_file_types_json: Mapped[str] = mapped_column(Text, default='["readme", "prompt_log", "python_analysis", "ovito_script", "slurm_script", "figure"]')
     validation_settings_json: Mapped[str] = mapped_column(Text, default="{}")
     interpretation_prompts_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
@@ -87,7 +143,7 @@ class Assignment(Base):
 
     @property
     def optional_file_types(self) -> list[str]:
-        return _json_list(self.optional_file_types_json, ["readme", "prompt_log", "python_analysis", "ovito_script", "figure"])
+        return _json_list(self.optional_file_types_json, ["readme", "prompt_log", "python_analysis", "ovito_script", "slurm_script", "figure"])
 
     @property
     def validation_settings(self) -> dict:
@@ -165,11 +221,19 @@ class PromptLogEntry(Base):
     manual_edits: Mapped[str] = mapped_column(Text, default="")
     validation_performed: Mapped[str] = mapped_column(Text, default="")
     remaining_concerns: Mapped[str] = mapped_column(Text, default="")
+    provider_status: Mapped[str] = mapped_column(String(64), default="manual")
+    provider_model: Mapped[str] = mapped_column(String(128), default="")
+    provider_response_id: Mapped[str] = mapped_column(String(255), default="")
+    privacy_flags_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
     user = relationship("User")
     project = relationship("ProjectSpecification")
     assignment = relationship("Assignment")
+
+    @property
+    def privacy_flags(self) -> list[str]:
+        return _json_list(self.privacy_flags_json, [])
 
 
 class Submission(Base):

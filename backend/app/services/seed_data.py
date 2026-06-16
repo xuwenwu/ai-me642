@@ -3,7 +3,8 @@ from datetime import date, timedelta
 import json
 from sqlalchemy.orm import Session
 from ..auth import hash_password
-from ..models import Assignment, Course, Enrollment, Rubric, RubricCriterion, Section, User
+from ..models import AIPolicy, Assignment, Course, Enrollment, PromptTemplate, Rubric, RubricCriterion, Section, User
+from .course_defaults import STARTER_PROMPT_TEMPLATES
 
 
 USERS = [
@@ -32,7 +33,7 @@ ASSIGNMENTS = [
         "due_offset_days": 14,
         "validation_profile": "lammps_basic_health",
         "required_file_types": ["lammps_input", "lammps_log"],
-        "optional_file_types": ["readme", "prompt_log", "figure", "data"],
+        "optional_file_types": ["readme", "prompt_log", "figure", "data", "slurm_script"],
         "validation_settings": {},
         "interpretation_prompts": [
             "What physical system and assumptions does your setup represent?",
@@ -51,7 +52,7 @@ ASSIGNMENTS = [
         "due_offset_days": 28,
         "validation_profile": "nvt_temperature_control",
         "required_file_types": ["lammps_input", "lammps_log"],
-        "optional_file_types": ["readme", "prompt_log", "figure", "python_analysis", "data"],
+        "optional_file_types": ["readme", "prompt_log", "figure", "python_analysis", "data", "slurm_script"],
         "validation_settings": {"target_temperature": 300, "temperature_tolerance": 75},
         "interpretation_prompts": [
             "What target temperature did you intend to control around, and why?",
@@ -70,7 +71,7 @@ ASSIGNMENTS = [
         "due_offset_days": 42,
         "validation_profile": "nve_energy_conservation",
         "required_file_types": ["lammps_input", "lammps_log"],
-        "optional_file_types": ["readme", "prompt_log", "python_analysis", "ovito_script", "figure", "data"],
+        "optional_file_types": ["readme", "prompt_log", "python_analysis", "ovito_script", "slurm_script", "figure", "data"],
         "validation_settings": {"energy_drift_warning_threshold": 0.05},
         "interpretation_prompts": [
             "What does the total-energy drift suggest about timestep stability?",
@@ -80,6 +81,34 @@ ASSIGNMENTS = [
         ],
     },
 ]
+
+AI_POLICY = {
+    "title": "ME642 Responsible AI Use Policy",
+    "body": (
+        "AI tools may support brainstorming, debugging, code explanation, and reflection on validation evidence. "
+        "Students remain responsible for every scientific claim, parameter choice, file submitted, and interpretation. "
+        "Do not use AI to fabricate simulation output, hide uncertainty, or replace validation. If AI assistance shaped "
+        "the work, record what was accepted, rejected, manually revised, and checked against evidence."
+    ),
+    "allowed_tools": ["ChatGPT", "GitHub Copilot", "Claude", "Gemini"],
+    "disclosure_requirements": [
+        "Record the AI tool, task purpose, and prompt or prompt summary.",
+        "Summarize the AI output in your own words.",
+        "Identify accepted and rejected suggestions.",
+        "Describe manual edits and validation performed after AI assistance.",
+        "State remaining concerns or uncertainties before submission.",
+    ],
+    "assistant_enabled": False,
+    "assistant_provider": "offline",
+    "assistant_model": "",
+    "assistant_system_prompt": (
+        "You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and "
+        "interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims."
+    ),
+    "assistant_retention_days": 180,
+}
+
+PROMPT_TEMPLATES = STARTER_PROMPT_TEMPLATES
 
 
 def seed(db: Session) -> None:
@@ -102,6 +131,32 @@ def seed(db: Session) -> None:
         )
         db.add(course)
         db.flush()
+
+    policy = db.query(AIPolicy).filter_by(course_id=course.id).first()
+    if not policy:
+        policy = AIPolicy(course_id=course.id)
+        db.add(policy)
+        db.flush()
+    policy.title = AI_POLICY["title"]
+    policy.body = AI_POLICY["body"]
+    policy.allowed_tools_json = json.dumps(AI_POLICY["allowed_tools"])
+    policy.disclosure_requirements_json = json.dumps(AI_POLICY["disclosure_requirements"])
+    policy.assistant_enabled = AI_POLICY["assistant_enabled"]
+    policy.assistant_provider = AI_POLICY["assistant_provider"]
+    policy.assistant_model = AI_POLICY["assistant_model"]
+    policy.assistant_system_prompt = AI_POLICY["assistant_system_prompt"]
+    policy.assistant_retention_days = AI_POLICY["assistant_retention_days"]
+
+    for item in PROMPT_TEMPLATES:
+        template = db.query(PromptTemplate).filter_by(course_id=course.id, title=item["title"]).first()
+        if not template:
+            template = PromptTemplate(course_id=course.id, title=item["title"])
+            db.add(template)
+            db.flush()
+        template.task_type = item["task_type"]
+        template.prompt_text = item["prompt_text"]
+        template.checklist_json = json.dumps(item["checklist"])
+        template.status = "active"
 
     section = db.query(Section).filter_by(course_id=course.id, name="Pilot Section A").first()
     if not section:

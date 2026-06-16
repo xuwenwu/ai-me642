@@ -1,0 +1,519 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { AppShell } from '@/components/AppShell';
+import { fileTypeLabels } from '@/components/ValidationSummary';
+import { api, download } from '@/lib/api';
+import type { AIPolicy, AIPolicyInput, AIProviderReadiness, AIProviderTestResult, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
+
+const fileTypes = ['lammps_input', 'lammps_log', 'readme', 'prompt_log', 'python_analysis', 'ovito_script', 'slurm_script', 'figure', 'data', 'other'];
+const validationProfiles = ['lammps_basic_health', 'nvt_temperature_control', 'nve_energy_conservation'];
+const openAiModels = ['gpt-5.4-mini', 'gpt-5.5'];
+
+const emptyAssignment: AssignmentManageInput = {
+  title: '',
+  description: '',
+  assignment_type: 'lab',
+  due_date: '',
+  total_points: 100,
+  status: 'published',
+  validation_profile: 'lammps_basic_health',
+  required_file_types: ['lammps_input', 'lammps_log'],
+  optional_file_types: ['readme', 'prompt_log'],
+  validation_settings: {},
+  interpretation_prompts: [],
+};
+
+const emptyPolicy: AIPolicyInput = {
+  title: 'ME642 Responsible AI Use Policy',
+  body: '',
+  allowed_tools: [],
+  disclosure_requirements: [],
+  assistant_enabled: false,
+  assistant_provider: 'offline',
+  assistant_model: '',
+  assistant_system_prompt: 'You are a cautious ME642 course assistant. Help students plan checks, debug reasoning, and interpret validation evidence. Do not fabricate simulation outputs, grades, or final scientific claims.',
+  assistant_retention_days: 180,
+};
+
+const emptyTemplate: PromptTemplateInput = {
+  title: '',
+  task_type: 'lammps_debugging',
+  prompt_text: '',
+  checklist: [],
+  status: 'active',
+};
+
+function assignmentForm(assignment: Assignment | undefined): AssignmentManageInput {
+  if (!assignment) return emptyAssignment;
+  return {
+    title: assignment.title,
+    description: assignment.description,
+    assignment_type: assignment.assignment_type,
+    due_date: assignment.due_date || '',
+    total_points: assignment.total_points,
+    status: assignment.status,
+    validation_profile: assignment.validation_profile,
+    required_file_types: assignment.required_file_types,
+    optional_file_types: assignment.optional_file_types,
+    validation_settings: assignment.validation_settings,
+    interpretation_prompts: assignment.interpretation_prompts,
+  };
+}
+
+function toggleValue(values: string[], value: string) {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
+function linesToList(value: string) {
+  return value.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function templateForm(template: PromptTemplate | undefined): PromptTemplateInput {
+  if (!template) return emptyTemplate;
+  return {
+    title: template.title,
+    task_type: template.task_type,
+    prompt_text: template.prompt_text,
+    checklist: template.checklist,
+    status: template.status,
+  };
+}
+
+export default function InstructorSetupPage() {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [roster, setRoster] = useState<RosterStudent[]>([]);
+  const [policy, setPolicy] = useState<AIPolicy | null>(null);
+  const [aiReadiness, setAiReadiness] = useState<AIProviderReadiness | null>(null);
+  const [aiTestResult, setAiTestResult] = useState<AIProviderTestResult | null>(null);
+  const [aiTestBusy, setAiTestBusy] = useState(false);
+  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('new');
+  const [assignmentFormState, setAssignmentFormState] = useState<AssignmentManageInput>(emptyAssignment);
+  const [settingsText, setSettingsText] = useState('{}');
+  const [promptsText, setPromptsText] = useState('');
+  const [policyForm, setPolicyForm] = useState<AIPolicyInput>(emptyPolicy);
+  const [allowedToolsText, setAllowedToolsText] = useState('');
+  const [requirementsText, setRequirementsText] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('new');
+  const [templateFormState, setTemplateFormState] = useState<PromptTemplateInput>(emptyTemplate);
+  const [templateChecklistText, setTemplateChecklistText] = useState('');
+  const [studentForm, setStudentForm] = useState({ full_name: '', email: '', section: 'Pilot Section A', password: 'temporary-pass-123', is_active: true, must_change_password: true });
+  const [csvText, setCsvText] = useState('full_name,email,section,password,must_change_password,is_active\n');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [importResult, setImportResult] = useState<RosterImportResult | null>(null);
+
+  const selectedAssignment = useMemo(
+    () => assignments.find((assignment) => assignment.id === Number(selectedAssignmentId)),
+    [assignments, selectedAssignmentId],
+  );
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === Number(selectedTemplateId)),
+    [templates, selectedTemplateId],
+  );
+
+  async function load() {
+    const [a, r, aiPolicy, readiness, t] = await Promise.all([
+      api<Assignment[]>('/instructor/assignments'),
+      api<RosterStudent[]>('/instructor/roster'),
+      api<AIPolicy>('/instructor/ai-policy'),
+      api<AIProviderReadiness>('/instructor/ai-policy/readiness'),
+      api<PromptTemplate[]>('/instructor/prompt-templates'),
+    ]);
+    setAssignments(a);
+    setRoster(r);
+    setPolicy(aiPolicy);
+    setAiReadiness(readiness);
+    setTemplates(t);
+  }
+
+  useEffect(() => {
+    load().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load course setup'));
+  }, []);
+
+  useEffect(() => {
+    const next = assignmentForm(selectedAssignment);
+    setAssignmentFormState(next);
+    setSettingsText(JSON.stringify(next.validation_settings, null, 2));
+    setPromptsText(next.interpretation_prompts.join('\n'));
+  }, [selectedAssignment]);
+
+  useEffect(() => {
+    const next = policy ? {
+      title: policy.title,
+      body: policy.body,
+      allowed_tools: policy.allowed_tools,
+      disclosure_requirements: policy.disclosure_requirements,
+      assistant_enabled: policy.assistant_enabled,
+      assistant_provider: policy.assistant_provider,
+      assistant_model: policy.assistant_model,
+      assistant_system_prompt: policy.assistant_system_prompt,
+      assistant_retention_days: policy.assistant_retention_days,
+    } : emptyPolicy;
+    setPolicyForm(next);
+    setAllowedToolsText(next.allowed_tools.join('\n'));
+    setRequirementsText(next.disclosure_requirements.join('\n'));
+  }, [policy]);
+
+  useEffect(() => {
+    const next = templateForm(selectedTemplate);
+    setTemplateFormState(next);
+    setTemplateChecklistText(next.checklist.join('\n'));
+  }, [selectedTemplate]);
+
+  async function saveAssignment(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      const validation_settings = JSON.parse(settingsText || '{}') as Record<string, unknown>;
+      const payload = {
+        ...assignmentFormState,
+        title: assignmentFormState.title.trim(),
+        due_date: assignmentFormState.due_date || null,
+        validation_settings,
+        interpretation_prompts: promptsText.split('\n').map((line) => line.trim()).filter(Boolean),
+      };
+      const path = selectedAssignment ? `/instructor/assignments/${selectedAssignment.id}` : '/instructor/assignments';
+      const method = selectedAssignment ? 'PATCH' : 'POST';
+      const saved = await api<Assignment>(path, { method, body: JSON.stringify(payload) });
+      await load();
+      setSelectedAssignmentId(String(saved.id));
+      setMessage(`Saved assignment: ${saved.title}`);
+    } catch (err) {
+      setError(err instanceof SyntaxError ? 'Validation settings must be valid JSON.' : err instanceof Error ? err.message : 'Failed to save assignment');
+    }
+  }
+
+  async function savePolicy(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      const saved = await api<AIPolicy>('/instructor/ai-policy', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...policyForm,
+          title: policyForm.title.trim(),
+          allowed_tools: linesToList(allowedToolsText),
+          disclosure_requirements: linesToList(requirementsText),
+          assistant_model: policyForm.assistant_model.trim(),
+          assistant_system_prompt: policyForm.assistant_system_prompt.trim(),
+        }),
+      });
+      setPolicy(saved);
+      setAiReadiness(await api<AIProviderReadiness>('/instructor/ai-policy/readiness'));
+      setAiTestResult(null);
+      setMessage(`Saved AI policy: ${saved.title}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save AI policy');
+    }
+  }
+
+  async function testAIProvider() {
+    setError('');
+    setMessage('');
+    setAiTestResult(null);
+    setAiTestBusy(true);
+    try {
+      const result = await api<AIProviderTestResult>('/instructor/ai-policy/test', {
+        method: 'POST',
+        body: JSON.stringify({
+          task_type: 'lammps_debugging',
+          prompt_text: 'Help a ME642 student plan validation checks for a LAMMPS NVE energy-conservation submission. Keep the advice cautious and evidence-based.',
+        }),
+      });
+      setAiTestResult(result);
+      setAiReadiness(result.readiness);
+      setMessage(`Course assistant test completed with ${result.provider_status}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to test AI provider');
+    } finally {
+      setAiTestBusy(false);
+    }
+  }
+
+  async function saveTemplate(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      const payload = {
+        ...templateFormState,
+        title: templateFormState.title.trim(),
+        checklist: linesToList(templateChecklistText),
+      };
+      const path = selectedTemplate ? `/instructor/prompt-templates/${selectedTemplate.id}` : '/instructor/prompt-templates';
+      const method = selectedTemplate ? 'PATCH' : 'POST';
+      const saved = await api<PromptTemplate>(path, { method, body: JSON.stringify(payload) });
+      await load();
+      setSelectedTemplateId(String(saved.id));
+      setMessage(`Saved prompt template: ${saved.title}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save prompt template');
+    }
+  }
+
+  async function addStudent(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      const student = await api<RosterStudent>('/instructor/roster/students', { method: 'POST', body: JSON.stringify(studentForm) });
+      await load();
+      setStudentForm({ full_name: '', email: '', section: student.section || 'Pilot Section A', password: 'temporary-pass-123', is_active: true, must_change_password: true });
+      setMessage(`Saved student: ${student.full_name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save student');
+    }
+  }
+
+  async function importRoster(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    setImportResult(null);
+    try {
+      const result = await api<RosterImportResult>('/instructor/roster/import', {
+        method: 'POST',
+        body: JSON.stringify({ csv_text: csvText, default_section: 'Pilot Section A' }),
+      });
+      await load();
+      setImportResult(result);
+      setMessage(`Roster import complete: ${result.created_count} created, ${result.updated_count} updated.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to import roster');
+    }
+  }
+
+  async function updateStudentAccount(student: RosterStudent, updates: { is_active?: boolean; must_change_password?: boolean }) {
+    setError('');
+    setMessage('');
+    try {
+      const saved = await api<RosterStudent>(`/instructor/roster/students/${student.student_id}/account`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          is_active: updates.is_active ?? student.is_active,
+          must_change_password: updates.must_change_password ?? student.must_change_password,
+        }),
+      });
+      await load();
+      setMessage(`Updated account: ${saved.full_name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update account');
+    }
+  }
+
+  async function resetPassword(student: RosterStudent) {
+    const newPassword = window.prompt(`Temporary password for ${student.email}`, 'temporary-pass-123');
+    if (!newPassword) return;
+    setError('');
+    setMessage('');
+    try {
+      const saved = await api<RosterStudent>(`/instructor/roster/students/${student.student_id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ new_password: newPassword, must_change_password: true }),
+      });
+      await load();
+      setMessage(`Reset password for ${saved.full_name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password');
+    }
+  }
+
+  return (
+    <AppShell>
+      <div className="section-header">
+        <h1>Course Setup</h1>
+        <div className="row">
+          <Link href="/instructor">Instructor overview</Link>
+          <Link href="/instructor/submissions">Review queue</Link>
+        </div>
+      </div>
+      {error ? <div className="error">{error}</div> : null}
+      {message ? <div className="success">{message}</div> : null}
+      <div className="grid two">
+        <section className="card">
+          <h2>Assignment Authoring</h2>
+          <label>Assignment<select value={selectedAssignmentId} onChange={(e) => setSelectedAssignmentId(e.target.value)}>
+            <option value="new">New assignment</option>
+            {assignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.title}</option>)}
+          </select></label>
+          <form className="form" onSubmit={saveAssignment} style={{ marginTop: '0.85rem' }}>
+            <label>Title<input value={assignmentFormState.title} onChange={(e) => setAssignmentFormState({ ...assignmentFormState, title: e.target.value })} required /></label>
+            <label>Description<textarea value={assignmentFormState.description} onChange={(e) => setAssignmentFormState({ ...assignmentFormState, description: e.target.value })} /></label>
+            <div className="filter-grid">
+              <label>Due date<input value={assignmentFormState.due_date || ''} onChange={(e) => setAssignmentFormState({ ...assignmentFormState, due_date: e.target.value })} placeholder="YYYY-MM-DD" /></label>
+              <label>Points<input type="number" min="0" step="1" value={assignmentFormState.total_points} onChange={(e) => setAssignmentFormState({ ...assignmentFormState, total_points: Number(e.target.value) })} /></label>
+              <label>Status<select value={assignmentFormState.status} onChange={(e) => setAssignmentFormState({ ...assignmentFormState, status: e.target.value })}>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </select></label>
+              <label>Validation profile<select value={assignmentFormState.validation_profile} onChange={(e) => setAssignmentFormState({ ...assignmentFormState, validation_profile: e.target.value })}>
+                {validationProfiles.map((profile) => <option key={profile} value={profile}>{profile}</option>)}
+              </select></label>
+            </div>
+            <fieldset className="check-panel">
+              <legend>Required Evidence</legend>
+              {fileTypes.map((type) => (
+                <label key={type}><input type="checkbox" checked={assignmentFormState.required_file_types.includes(type)} onChange={() => setAssignmentFormState({ ...assignmentFormState, required_file_types: toggleValue(assignmentFormState.required_file_types, type) })} /> {fileTypeLabels[type] ?? type}</label>
+              ))}
+            </fieldset>
+            <fieldset className="check-panel">
+              <legend>Optional Evidence</legend>
+              {fileTypes.map((type) => (
+                <label key={type}><input type="checkbox" checked={assignmentFormState.optional_file_types.includes(type)} onChange={() => setAssignmentFormState({ ...assignmentFormState, optional_file_types: toggleValue(assignmentFormState.optional_file_types, type) })} /> {fileTypeLabels[type] ?? type}</label>
+              ))}
+            </fieldset>
+            <label>Validation settings JSON<textarea value={settingsText} onChange={(e) => setSettingsText(e.target.value)} /></label>
+            <label>Reflection prompts<textarea value={promptsText} onChange={(e) => setPromptsText(e.target.value)} placeholder="One prompt per line" /></label>
+            <button>{selectedAssignment ? 'Save assignment' : 'Create assignment'}</button>
+          </form>
+        </section>
+
+        <section className="card">
+          <h2>Roster Setup</h2>
+          <div className="row" style={{ marginBottom: '0.85rem' }}>
+            <button className="secondary" type="button" onClick={() => download('/instructor/roster.csv', 'roster_export.csv')}>Download roster CSV</button>
+          </div>
+          <form className="form" onSubmit={addStudent}>
+            <label>Full name<input value={studentForm.full_name} onChange={(e) => setStudentForm({ ...studentForm, full_name: e.target.value })} required /></label>
+            <label>Email<input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} required /></label>
+            <label>Section<input value={studentForm.section} onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })} /></label>
+            <label>Initial password<input value={studentForm.password} onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })} /></label>
+            <fieldset className="check-panel">
+              <legend>Account</legend>
+              <label><input type="checkbox" checked={studentForm.is_active} onChange={(e) => setStudentForm({ ...studentForm, is_active: e.target.checked })} /> Active</label>
+              <label><input type="checkbox" checked={studentForm.must_change_password} onChange={(e) => setStudentForm({ ...studentForm, must_change_password: e.target.checked })} /> Require password change</label>
+            </fieldset>
+            <button>Add or update student</button>
+          </form>
+          <form className="form" onSubmit={importRoster} style={{ marginTop: '1rem' }}>
+            <label>CSV import<textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} /></label>
+            <button className="secondary">Import roster CSV</button>
+          </form>
+          {importResult ? (
+            <div className="assignment-context" style={{ marginTop: '0.85rem' }}>
+              <strong>Import result</strong>
+              <p>{importResult.created_count} created, {importResult.updated_count} updated, {importResult.skipped_count} skipped.</p>
+              {importResult.errors.map((item) => <p key={item} className="muted">{item}</p>)}
+            </div>
+          ) : null}
+        </section>
+      </div>
+
+      <div className="grid two" style={{ marginTop: '1rem' }}>
+        <section className="card">
+          <h2>AI Policy</h2>
+          {aiReadiness ? (
+            <div className="assignment-context" style={{ marginBottom: '0.85rem' }}>
+              <div className="row">
+                <span className={`status ${aiReadiness.configured ? 'passed' : aiReadiness.provider_mode === 'offline' ? 'warning' : 'failed'}`}>
+                  {aiReadiness.provider_mode}
+                </span>
+                <strong>{aiReadiness.configured ? 'Ready' : 'Not ready'}</strong>
+              </div>
+              <p className="muted">{aiReadiness.message}</p>
+              <div className="metric-grid compact">
+                <div><span>Model</span><strong>{aiReadiness.model || '-'}</strong></div>
+                <div><span>Requests</span><strong>{aiReadiness.requests_used}/{aiReadiness.request_limit || '-'}</strong></div>
+                <div><span>Est. tokens</span><strong>{aiReadiness.tokens_estimated}/{aiReadiness.token_budget || '-'}</strong></div>
+              </div>
+              <button className="secondary" type="button" onClick={testAIProvider} disabled={aiTestBusy}>
+                {aiTestBusy ? 'Testing...' : 'Test course assistant'}
+              </button>
+              {aiTestResult ? (
+                <div className="success" style={{ marginTop: '0.85rem' }}>
+                  <strong>{aiTestResult.provider_model}</strong>
+                  <p>{aiTestResult.output_summary}</p>
+                  {aiTestResult.privacy_flags.length ? <p>Privacy flags: {aiTestResult.privacy_flags.join(', ')}</p> : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <form className="form" onSubmit={savePolicy}>
+            <label>Title<input value={policyForm.title} onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })} required /></label>
+            <label>Policy body<textarea value={policyForm.body} onChange={(e) => setPolicyForm({ ...policyForm, body: e.target.value })} /></label>
+            <label>Allowed tools<textarea value={allowedToolsText} onChange={(e) => setAllowedToolsText(e.target.value)} placeholder="One tool per line" /></label>
+            <label>Disclosure requirements<textarea value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} placeholder="One requirement per line" /></label>
+            <fieldset className="check-panel">
+              <legend>Course Assistant</legend>
+              <label><input type="checkbox" checked={policyForm.assistant_enabled} onChange={(e) => setPolicyForm({ ...policyForm, assistant_enabled: e.target.checked })} /> Enabled</label>
+            </fieldset>
+            <div className="filter-grid">
+              <label>Provider<select value={policyForm.assistant_provider} onChange={(e) => setPolicyForm({ ...policyForm, assistant_provider: e.target.value })}>
+                <option value="offline">Offline course guidance</option>
+                <option value="openai">OpenAI</option>
+              </select></label>
+              <label>Model<input list="openai-models" value={policyForm.assistant_model} onChange={(e) => setPolicyForm({ ...policyForm, assistant_model: e.target.value })} placeholder="gpt-5.4-mini" /></label>
+              <datalist id="openai-models">
+                {openAiModels.map((model) => <option key={model} value={model} />)}
+              </datalist>
+              <label>Retention days<input type="number" min="0" step="1" value={policyForm.assistant_retention_days} onChange={(e) => setPolicyForm({ ...policyForm, assistant_retention_days: Number(e.target.value) })} /></label>
+            </div>
+            <label>Assistant system prompt<textarea value={policyForm.assistant_system_prompt} onChange={(e) => setPolicyForm({ ...policyForm, assistant_system_prompt: e.target.value })} /></label>
+            <button>Save AI policy</button>
+          </form>
+        </section>
+
+        <section className="card">
+          <h2>Prompt Templates</h2>
+          <label>Template<select value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
+            <option value="new">New template</option>
+            {templates.map((template) => <option key={template.id} value={template.id}>{template.title}</option>)}
+          </select></label>
+          <form className="form" onSubmit={saveTemplate} style={{ marginTop: '0.85rem' }}>
+            <label>Title<input value={templateFormState.title} onChange={(e) => setTemplateFormState({ ...templateFormState, title: e.target.value })} required /></label>
+            <div className="filter-grid">
+              <label>Task type<input value={templateFormState.task_type} onChange={(e) => setTemplateFormState({ ...templateFormState, task_type: e.target.value })} /></label>
+              <label>Status<select value={templateFormState.status} onChange={(e) => setTemplateFormState({ ...templateFormState, status: e.target.value })}>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+              </select></label>
+            </div>
+            <label>Prompt text<textarea value={templateFormState.prompt_text} onChange={(e) => setTemplateFormState({ ...templateFormState, prompt_text: e.target.value })} /></label>
+            <label>Checklist<textarea value={templateChecklistText} onChange={(e) => setTemplateChecklistText(e.target.value)} placeholder="One checklist item per line" /></label>
+            <button>{selectedTemplate ? 'Save template' : 'Create template'}</button>
+          </form>
+        </section>
+      </div>
+
+      <section className="card" style={{ marginTop: '1rem' }}>
+        <h2>Current Roster</h2>
+        {roster.length ? (
+          <table>
+            <thead><tr><th>Student</th><th>Section</th><th>Account</th><th>Submissions</th><th>Submitted</th><th>Warnings</th><th>Graded</th><th>Missing</th><th>Actions</th></tr></thead>
+            <tbody>
+              {roster.map((student) => (
+                <tr key={student.student_id}>
+                  <td>{student.full_name}<div className="muted">{student.email}</div></td>
+                  <td>{student.section}</td>
+                  <td><span className={`status ${student.account_status === 'inactive' ? 'failed' : student.must_change_password ? 'warning' : 'passed'}`}>{student.account_status}</span></td>
+                  <td>{student.submissions_count}/{student.total_assignments}</td>
+                  <td>{student.submitted_count}</td>
+                  <td>{student.warning_count}</td>
+                  <td>{student.graded_count}</td>
+                  <td>{student.missing_count}</td>
+                  <td>
+                    <div className="row">
+                      <button className="secondary" type="button" onClick={() => resetPassword(student)}>Reset password</button>
+                      <button className="secondary" type="button" onClick={() => updateStudentAccount(student, { must_change_password: !student.must_change_password })}>
+                        {student.must_change_password ? 'Clear required change' : 'Require change'}
+                      </button>
+                      <button className="secondary" type="button" onClick={() => updateStudentAccount(student, { is_active: !student.is_active })}>
+                        {student.is_active ? 'Deactivate' : 'Reactivate'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : <p className="muted">No active students found.</p>}
+      </section>
+    </AppShell>
+  );
+}

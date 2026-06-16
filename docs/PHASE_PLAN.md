@@ -153,3 +153,10 @@
 - Instructor browser tests cover review queue, validation evidence, grading, gradebook, and course setup checks.
 - Mobile viewport tests cover student and instructor core page rendering.
 - E2E tests create unique pilot data through instructor APIs, then verify behavior through the browser UI.
+
+## Phase XX: E2E CI and Pilot Data Hygiene
+
+- Manual/weekly GitHub Actions workflow runs the Playwright browser suite against a temporary seeded backend and frontend.
+- Workflow uploads Playwright reports and server logs when browser tests fail.
+- Backend cleanup script reports and removes only `e2e-...` Playwright students, assignments, submissions, and uploaded files.
+- Cleanup behavior is covered by backend tests and documented for repeated local pilot runs.

@@ -146,6 +146,16 @@ $env:E2E_BASE_URL="http://127.0.0.1:3001"
 npm run e2e
 ```
 
+The E2E tests create temporary students and assignments with `e2e-...` markers. To remove that test data from the configured backend database and upload folder:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\cleanup_e2e_data.py
+.\.venv\Scripts\python.exe scripts\cleanup_e2e_data.py --confirm
+```
+
+GitHub also includes a manual/weekly **E2E Browser Tests** workflow. Run it from the Actions tab when you want an automated student-to-instructor browser regression check before a pilot milestone.
+
 ## Reset Local Demo Data
 
 Use this only for local development when you want a clean seeded database and empty upload/generated folders:

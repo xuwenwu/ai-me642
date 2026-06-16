@@ -190,6 +190,7 @@ export default function PromptLogsPage() {
             <p key={log.id}>
               <strong>{log.title}</strong> - {log.ai_tool_name} - {log.task_type}
               {log.provider_status !== 'manual' ? <span className="muted"> - {log.provider_status}</span> : null}
+              {log.provider_total_tokens ? <span className="muted"> - {log.provider_total_tokens} tokens</span> : null}
             </p>
           ))
         ) : <p className="muted">No prompt logs recorded yet.</p>}

@@ -167,3 +167,11 @@
 - Instructor guide covers setup, class-session flow, grading routine, common interventions, and post-pilot notes.
 - Student quick-start guide explains login, prompt logs, uploads, validation, interpretation, and final submission.
 - First NVE energy-conservation pilot assignment, rubric, sample-submission calibration notes, feedback prompts, and roster template are ready to adapt.
+
+## Phase XXII: Production OpenAI Assistant Hardening
+
+- OpenAI provider uses the Responses API with server-side API keys, `store=false`, structured JSON output, reasoning effort, verbosity, timeout, and output-token controls.
+- Generated prompt logs store provider response id, model, privacy flags, and input/output/total token usage when returned by the provider.
+- External calls are blocked for expanded private-data patterns before any request leaves the server.
+- Instructor provider test and student prompt-log generation share the same hardened provider path.
+- Reproducibility packages and course archives include provider metadata for auditability.

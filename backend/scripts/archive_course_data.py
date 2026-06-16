@@ -100,8 +100,39 @@ def main() -> None:
             _write_csv(
                 zf,
                 "prompt_logs.csv",
-                ["id", "user_id", "assignment_id", "project_id", "title", "task_type", "provider_status", "created_at"],
-                [[p.id, p.user_id, p.assignment_id or "", p.project_id or "", p.title, p.task_type, p.provider_status, p.created_at] for p in prompts],
+                [
+                    "id",
+                    "user_id",
+                    "assignment_id",
+                    "project_id",
+                    "title",
+                    "task_type",
+                    "provider_status",
+                    "provider_model",
+                    "provider_response_id",
+                    "provider_input_tokens",
+                    "provider_output_tokens",
+                    "provider_total_tokens",
+                    "created_at",
+                ],
+                [
+                    [
+                        p.id,
+                        p.user_id,
+                        p.assignment_id or "",
+                        p.project_id or "",
+                        p.title,
+                        p.task_type,
+                        p.provider_status,
+                        p.provider_model,
+                        p.provider_response_id,
+                        p.provider_input_tokens,
+                        p.provider_output_tokens,
+                        p.provider_total_tokens,
+                        p.created_at,
+                    ]
+                    for p in prompts
+                ],
             )
             for file in files:
                 source = Path(file.file_path)

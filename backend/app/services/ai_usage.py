@@ -43,7 +43,10 @@ def monthly_external_usage(db: Session, settings: Settings) -> AIUsage:
         )
         .all()
     )
-    tokens = sum(estimate_tokens(row.prompt_text) + estimate_tokens(row.ai_output_summary) for row in rows)
+    tokens = sum(
+        row.provider_total_tokens or estimate_tokens(row.prompt_text) + estimate_tokens(row.ai_output_summary)
+        for row in rows
+    )
     return AIUsage(
         request_limit=max(settings.ai_monthly_external_request_limit, 0),
         requests_used=len(rows),

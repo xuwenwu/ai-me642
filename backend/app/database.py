@@ -60,6 +60,12 @@ def _ensure_local_sqlite_columns() -> None:
             statements.append("ALTER TABLE prompt_log_entries ADD COLUMN provider_model VARCHAR(128) NOT NULL DEFAULT ''")
         if "provider_response_id" not in columns:
             statements.append("ALTER TABLE prompt_log_entries ADD COLUMN provider_response_id VARCHAR(255) NOT NULL DEFAULT ''")
+        if "provider_input_tokens" not in columns:
+            statements.append("ALTER TABLE prompt_log_entries ADD COLUMN provider_input_tokens INTEGER NOT NULL DEFAULT 0")
+        if "provider_output_tokens" not in columns:
+            statements.append("ALTER TABLE prompt_log_entries ADD COLUMN provider_output_tokens INTEGER NOT NULL DEFAULT 0")
+        if "provider_total_tokens" not in columns:
+            statements.append("ALTER TABLE prompt_log_entries ADD COLUMN provider_total_tokens INTEGER NOT NULL DEFAULT 0")
         if "privacy_flags_json" not in columns:
             statements.append("ALTER TABLE prompt_log_entries ADD COLUMN privacy_flags_json TEXT NOT NULL DEFAULT '[]'")
     if statements:

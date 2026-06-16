@@ -702,6 +702,9 @@ def test_ai_provider(
                 provider_status=result.provider_status,
                 provider_model=result.provider_model,
                 provider_response_id=result.provider_response_id,
+                provider_input_tokens=result.input_tokens,
+                provider_output_tokens=result.output_tokens,
+                provider_total_tokens=result.total_tokens,
                 privacy_flags_json=json.dumps(result.privacy_flags),
             )
         )
@@ -711,6 +714,9 @@ def test_ai_provider(
         provider_status=result.provider_status,
         provider_model=result.provider_model,
         output_summary=result.output_summary,
+        provider_input_tokens=result.input_tokens,
+        provider_output_tokens=result.output_tokens,
+        provider_total_tokens=result.total_tokens,
         privacy_flags=result.privacy_flags,
         readiness=_ai_readiness_out(db, policy),
     )

@@ -127,6 +127,9 @@ def create_prompt_log(
     data["provider_status"] = "manual"
     data["provider_model"] = ""
     data["provider_response_id"] = ""
+    data["provider_input_tokens"] = 0
+    data["provider_output_tokens"] = 0
+    data["provider_total_tokens"] = 0
     prompt = PromptLogEntry(**data, privacy_flags_json=json.dumps(privacy_flags(payload.prompt_text)), user_id=user.id)
     db.add(prompt)
     db.commit()
@@ -174,6 +177,9 @@ def generate_assistant_prompt_log(
         provider_status=result.provider_status,
         provider_model=result.provider_model,
         provider_response_id=result.provider_response_id,
+        provider_input_tokens=result.input_tokens,
+        provider_output_tokens=result.output_tokens,
+        provider_total_tokens=result.total_tokens,
         privacy_flags_json=json.dumps(result.privacy_flags),
     )
     db.add(prompt)

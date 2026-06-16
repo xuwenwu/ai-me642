@@ -420,7 +420,7 @@ export default function InstructorSetupPage() {
               <div className="metric-grid compact">
                 <div><span>Model</span><strong>{aiReadiness.model || '-'}</strong></div>
                 <div><span>Requests</span><strong>{aiReadiness.requests_used}/{aiReadiness.request_limit || '-'}</strong></div>
-                <div><span>Est. tokens</span><strong>{aiReadiness.tokens_estimated}/{aiReadiness.token_budget || '-'}</strong></div>
+                <div><span>Tokens</span><strong>{aiReadiness.tokens_estimated}/{aiReadiness.token_budget || '-'}</strong></div>
               </div>
               <button className="secondary" type="button" onClick={testAIProvider} disabled={aiTestBusy}>
                 {aiTestBusy ? 'Testing...' : 'Test course assistant'}
@@ -429,6 +429,9 @@ export default function InstructorSetupPage() {
                 <div className="success" style={{ marginTop: '0.85rem' }}>
                   <strong>{aiTestResult.provider_model}</strong>
                   <p>{aiTestResult.output_summary}</p>
+                  {aiTestResult.provider_total_tokens ? (
+                    <p>Usage: {aiTestResult.provider_input_tokens} input / {aiTestResult.provider_output_tokens} output tokens.</p>
+                  ) : null}
                   {aiTestResult.privacy_flags.length ? <p>Privacy flags: {aiTestResult.privacy_flags.join(', ')}</p> : null}
                 </div>
               ) : null}

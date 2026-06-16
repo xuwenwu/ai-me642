@@ -32,6 +32,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - CSV gradebook export, filter-aware queue export, Canvas import CSV, LMS detail CSV, and roster CSV export.
 - Hosted HTTPS deployment templates, Canvas API status scaffolding, and course data archive tooling.
 - GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
+- Playwright E2E browser tests for the student, instructor, and mobile pilot paths.
 - Production environment guardrails, security headers, Docker pilot packaging, deployment docs, readiness checks, and local backup helper.
 - Reproducible ZIP package export.
 
@@ -134,6 +135,15 @@ cd backend
 .\.venv\Scripts\Activate.ps1
 $env:PYTHONPATH="."
 pytest
+```
+
+Browser E2E tests run against a live app, such as the Docker pilot on `http://127.0.0.1:3001`:
+
+```powershell
+cd frontend
+npm run e2e:install
+$env:E2E_BASE_URL="http://127.0.0.1:3001"
+npm run e2e
 ```
 
 ## Reset Local Demo Data

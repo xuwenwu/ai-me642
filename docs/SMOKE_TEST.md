@@ -9,6 +9,17 @@ cd backend
 .\.venv\Scripts\python.exe -m pytest app\tests\test_workflow_smoke.py
 ```
 
+The automated browser version is under `frontend/e2e`. It drives the UI in Chromium and creates unique E2E test data through the instructor API before using the browser:
+
+```powershell
+cd frontend
+npm run e2e:install
+$env:E2E_BASE_URL="http://127.0.0.1:3001"
+npm run e2e
+```
+
+If testing a fresh local dev server instead of the Docker pilot, set `E2E_BASE_URL` to the frontend URL and optionally set `E2E_INSTRUCTOR_EMAIL` / `E2E_INSTRUCTOR_PASSWORD`.
+
 ## Start The App
 
 Run these commands from the repository root in two separate terminals.

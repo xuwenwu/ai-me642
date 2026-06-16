@@ -176,7 +176,7 @@ export default function InstructorSubmissionsPage() {
           <label>Search<input value={search} onChange={(e) => setSearch(e.target.value)} /></label>
         </div>
         <div className="row" style={{ marginTop: '0.85rem' }}>
-          <select value={selected?.id || ''} onChange={(e) => setSelectedId(Number(e.target.value))}>
+          <select data-testid="instructor-submission-select" value={selected?.id || ''} onChange={(e) => setSelectedId(Number(e.target.value))}>
             {filteredSubmissions.map((submission) => (
               <option key={submission.id} value={submission.id}>
                 #{submission.id} {assignmentById.get(submission.assignment_id)?.title || 'Assignment'} - {submission.title}

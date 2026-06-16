@@ -160,3 +160,10 @@
 - Workflow uploads Playwright reports and server logs when browser tests fail.
 - Backend cleanup script reports and removes only `e2e-...` Playwright students, assignments, submissions, and uploaded files.
 - Cleanup behavior is covered by backend tests and documented for repeated local pilot runs.
+
+## Phase XXI: Real Pilot Content Pack
+
+- Course-facing pilot materials live in `docs/course_pilot`.
+- Instructor guide covers setup, class-session flow, grading routine, common interventions, and post-pilot notes.
+- Student quick-start guide explains login, prompt logs, uploads, validation, interpretation, and final submission.
+- First NVE energy-conservation pilot assignment, rubric, sample-submission calibration notes, feedback prompts, and roster template are ready to adapt.

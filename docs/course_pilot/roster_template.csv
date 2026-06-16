@@ -1,0 +1,3 @@
+full_name,email,section,password,is_active,must_change_password
+Ada Pilot,ada.pilot@example.edu,Pilot Section A,temporary-pass-123,true,true
+Grace Pilot,grace.pilot@example.edu,Pilot Section A,temporary-pass-123,true,true

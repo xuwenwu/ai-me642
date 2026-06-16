@@ -45,7 +45,7 @@ docker compose -f docker-compose.pilot.yml exec backend python scripts/create_ad
 ```
 
 2. Sign in as instructor.
-3. Import the roster CSV with `full_name,email,section`.
+3. Import the roster CSV with `full_name,email,section`; `docs/course_pilot/roster_template.csv` includes optional password and account-status columns.
 4. Assign temporary passwords through the agreed class communication channel.
 5. Ask students to confirm login before the first graded activity.
 
@@ -71,6 +71,7 @@ Also confirm:
 - Students can reach `/login`.
 - Instructor can open Course Setup.
 - At least one sample submission can run validation.
+- Course-facing materials in `docs/course_pilot` have been adapted for the current class.
 - Backups completed after the previous class activity.
 
 ## Backups

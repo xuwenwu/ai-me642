@@ -73,14 +73,15 @@ cd backend
 7. Read `docs/PILOT_OPERATIONS.md`.
 8. Read `docs/DATA_RETENTION.md`.
 9. Read `docs/SECURITY_CHECKLIST.md`.
-10. For a local backup dry run, use:
+10. Read `docs/course_pilot/README.md` and confirm the instructor/student materials match the pilot assignment.
+11. For a local backup dry run, use:
 
 ```powershell
 cd backend
 .\.venv\Scripts\python.exe scripts\backup_local_data.py
 ```
 
-11. For a local archive dry run, use:
+12. For a local archive dry run, use:
 
 ```powershell
 cd backend

@@ -34,6 +34,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - GitHub Actions CI for backend tests, frontend typecheck, and frontend build.
 - Playwright E2E browser tests for the student, instructor, and mobile pilot paths.
 - Production environment guardrails, security headers, Docker pilot packaging, deployment docs, readiness checks, and local backup helper.
+- Small-class pilot content pack with instructor/student guides, a first assignment, rubric, calibration examples, and feedback prompts.
 - Reproducible ZIP package export.
 
 ## What This MVP Does Not Do
@@ -176,6 +177,8 @@ For pilot review, also use `docs/PILOT_READINESS.md`.
 For deployment and security hardening, use `docs/DEPLOYMENT.md` and `docs/SECURITY_CHECKLIST.md`.
 
 For a stable small-class pilot deployment, use `docs/PILOT_OPERATIONS.md` with `docker-compose.pilot.yml`.
+
+For course-facing pilot materials, use `docs/course_pilot/README.md`.
 
 For controlled AI provider setup, use `docs/CONTROLLED_AI.md`.
 

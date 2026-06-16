@@ -17,6 +17,7 @@ The current pilot supports configurable assignment workflows with assignment-spe
 - Student project specification capture.
 - AI prompt-log disclosure with accepted/rejected/manual-edit fields, course policy guidance, and reusable prompt templates.
 - Optional instructor-controlled course assistant for logged AI guidance, disabled by default and testable in offline mode.
+- Instructor-only AI provider readiness check, test prompt, and monthly external-call guardrails.
 - Submission creation, artifact upload, validation, interpretation, and submission.
 - LAMMPS log parsing for thermo output, warnings, errors, completion, and final values.
 - Assignment-aware validation profiles for basic LAMMPS health, NVT temperature control, and NVE energy conservation.

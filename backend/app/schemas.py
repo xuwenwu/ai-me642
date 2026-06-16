@@ -155,6 +155,34 @@ class AIPolicyOut(AIPolicyIn):
     updated_at: datetime
 
 
+class AIProviderReadinessOut(BaseModel):
+    provider_enabled: bool
+    provider_mode: str
+    configured: bool
+    model: str
+    request_limit: int
+    requests_used: int
+    token_budget: int
+    tokens_estimated: int
+    remaining_requests: int
+    remaining_tokens: int
+    message: str
+
+
+class AIProviderTestIn(BaseModel):
+    prompt_text: str = "Help a ME642 student plan validation checks for a LAMMPS NVE energy-conservation submission."
+    task_type: str = "lammps_debugging"
+
+
+class AIProviderTestOut(BaseModel):
+    status: str
+    provider_status: str
+    provider_model: str
+    output_summary: str
+    privacy_flags: list[str] = Field(default_factory=list)
+    readiness: AIProviderReadinessOut
+
+
 class PromptTemplateIn(BaseModel):
     title: str = Field(min_length=1)
     task_type: str = "lammps_debugging"

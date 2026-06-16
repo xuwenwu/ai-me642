@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { fileTypeLabels } from '@/components/ValidationSummary';
 import { api, download } from '@/lib/api';
-import type { AIPolicy, AIPolicyInput, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
+import type { AIPolicy, AIPolicyInput, AIProviderReadiness, AIProviderTestResult, Assignment, AssignmentManageInput, PromptTemplate, PromptTemplateInput, RosterImportResult, RosterStudent } from '@/lib/types';
 
 const fileTypes = ['lammps_input', 'lammps_log', 'readme', 'prompt_log', 'python_analysis', 'ovito_script', 'slurm_script', 'figure', 'data', 'other'];
 const validationProfiles = ['lammps_basic_health', 'nvt_temperature_control', 'nve_energy_conservation'];
+const openAiModels = ['gpt-5.4-mini', 'gpt-5.5'];
 
 const emptyAssignment: AssignmentManageInput = {
   title: '',
@@ -84,6 +85,9 @@ export default function InstructorSetupPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [roster, setRoster] = useState<RosterStudent[]>([]);
   const [policy, setPolicy] = useState<AIPolicy | null>(null);
+  const [aiReadiness, setAiReadiness] = useState<AIProviderReadiness | null>(null);
+  const [aiTestResult, setAiTestResult] = useState<AIProviderTestResult | null>(null);
+  const [aiTestBusy, setAiTestBusy] = useState(false);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('new');
   const [assignmentFormState, setAssignmentFormState] = useState<AssignmentManageInput>(emptyAssignment);
@@ -111,15 +115,17 @@ export default function InstructorSetupPage() {
   );
 
   async function load() {
-    const [a, r, aiPolicy, t] = await Promise.all([
+    const [a, r, aiPolicy, readiness, t] = await Promise.all([
       api<Assignment[]>('/instructor/assignments'),
       api<RosterStudent[]>('/instructor/roster'),
       api<AIPolicy>('/instructor/ai-policy'),
+      api<AIProviderReadiness>('/instructor/ai-policy/readiness'),
       api<PromptTemplate[]>('/instructor/prompt-templates'),
     ]);
     setAssignments(a);
     setRoster(r);
     setPolicy(aiPolicy);
+    setAiReadiness(readiness);
     setTemplates(t);
   }
 
@@ -198,9 +204,34 @@ export default function InstructorSetupPage() {
         }),
       });
       setPolicy(saved);
+      setAiReadiness(await api<AIProviderReadiness>('/instructor/ai-policy/readiness'));
+      setAiTestResult(null);
       setMessage(`Saved AI policy: ${saved.title}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save AI policy');
+    }
+  }
+
+  async function testAIProvider() {
+    setError('');
+    setMessage('');
+    setAiTestResult(null);
+    setAiTestBusy(true);
+    try {
+      const result = await api<AIProviderTestResult>('/instructor/ai-policy/test', {
+        method: 'POST',
+        body: JSON.stringify({
+          task_type: 'lammps_debugging',
+          prompt_text: 'Help a ME642 student plan validation checks for a LAMMPS NVE energy-conservation submission. Keep the advice cautious and evidence-based.',
+        }),
+      });
+      setAiTestResult(result);
+      setAiReadiness(result.readiness);
+      setMessage(`Course assistant test completed with ${result.provider_status}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to test AI provider');
+    } finally {
+      setAiTestBusy(false);
     }
   }
 
@@ -377,6 +408,32 @@ export default function InstructorSetupPage() {
       <div className="grid two" style={{ marginTop: '1rem' }}>
         <section className="card">
           <h2>AI Policy</h2>
+          {aiReadiness ? (
+            <div className="assignment-context" style={{ marginBottom: '0.85rem' }}>
+              <div className="row">
+                <span className={`status ${aiReadiness.configured ? 'passed' : aiReadiness.provider_mode === 'offline' ? 'warning' : 'failed'}`}>
+                  {aiReadiness.provider_mode}
+                </span>
+                <strong>{aiReadiness.configured ? 'Ready' : 'Not ready'}</strong>
+              </div>
+              <p className="muted">{aiReadiness.message}</p>
+              <div className="metric-grid compact">
+                <div><span>Model</span><strong>{aiReadiness.model || '-'}</strong></div>
+                <div><span>Requests</span><strong>{aiReadiness.requests_used}/{aiReadiness.request_limit || '-'}</strong></div>
+                <div><span>Est. tokens</span><strong>{aiReadiness.tokens_estimated}/{aiReadiness.token_budget || '-'}</strong></div>
+              </div>
+              <button className="secondary" type="button" onClick={testAIProvider} disabled={aiTestBusy}>
+                {aiTestBusy ? 'Testing...' : 'Test course assistant'}
+              </button>
+              {aiTestResult ? (
+                <div className="success" style={{ marginTop: '0.85rem' }}>
+                  <strong>{aiTestResult.provider_model}</strong>
+                  <p>{aiTestResult.output_summary}</p>
+                  {aiTestResult.privacy_flags.length ? <p>Privacy flags: {aiTestResult.privacy_flags.join(', ')}</p> : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <form className="form" onSubmit={savePolicy}>
             <label>Title<input value={policyForm.title} onChange={(e) => setPolicyForm({ ...policyForm, title: e.target.value })} required /></label>
             <label>Policy body<textarea value={policyForm.body} onChange={(e) => setPolicyForm({ ...policyForm, body: e.target.value })} /></label>
@@ -391,7 +448,10 @@ export default function InstructorSetupPage() {
                 <option value="offline">Offline course guidance</option>
                 <option value="openai">OpenAI</option>
               </select></label>
-              <label>Model<input value={policyForm.assistant_model} onChange={(e) => setPolicyForm({ ...policyForm, assistant_model: e.target.value })} /></label>
+              <label>Model<input list="openai-models" value={policyForm.assistant_model} onChange={(e) => setPolicyForm({ ...policyForm, assistant_model: e.target.value })} placeholder="gpt-5.4-mini" /></label>
+              <datalist id="openai-models">
+                {openAiModels.map((model) => <option key={model} value={model} />)}
+              </datalist>
               <label>Retention days<input type="number" min="0" step="1" value={policyForm.assistant_retention_days} onChange={(e) => setPolicyForm({ ...policyForm, assistant_retention_days: Number(e.target.value) })} /></label>
             </div>
             <label>Assistant system prompt<textarea value={policyForm.assistant_system_prompt} onChange={(e) => setPolicyForm({ ...policyForm, assistant_system_prompt: e.target.value })} /></label>

@@ -16,11 +16,20 @@ External provider calls require both:
 ```powershell
 AI_PROVIDER_ENABLED=true
 AI_PROVIDER_MODE=openai
-AI_PROVIDER_MODEL=<approved-model>
+AI_PROVIDER_MODEL=gpt-5.4-mini
+AI_EXTERNAL_MAX_OUTPUT_TOKENS=700
+AI_MONTHLY_EXTERNAL_REQUEST_LIMIT=200
+AI_MONTHLY_TOKEN_BUDGET=200000
 OPENAI_API_KEY=<server-side-key>
 ```
 
+Use `gpt-5.4-mini` for the first course pilot unless there is a specific need for the higher-cost `gpt-5.5` model. The course assistant is designed for bounded guidance, not unrestricted tutoring or grading.
+
 The backend blocks external calls if the prompt appears to include private email addresses, API keys, passwords, tokens, or private-key material. These checks are conservative hints, not a complete data-loss-prevention system.
+
+Course Setup includes an instructor-only readiness panel and test button. Use it before enabling the assistant for students. The test path verifies provider configuration without exposing the API key to the browser.
+
+External calls also respect monthly request and estimated-token guardrails. Offline course guidance does not count against these limits.
 
 ## Logged Metadata
 

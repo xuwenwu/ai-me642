@@ -68,8 +68,14 @@ def _extract_response_text(payload: dict) -> str:
     return "\n".join(parts).strip()
 
 
-def run_course_assistant(settings: Settings, policy: AIPolicy, task_type: str, prompt_text: str) -> AIProviderResult:
-    if not policy.assistant_enabled:
+def run_course_assistant(
+    settings: Settings,
+    policy: AIPolicy,
+    task_type: str,
+    prompt_text: str,
+    force_enabled: bool = False,
+) -> AIProviderResult:
+    if not force_enabled and not policy.assistant_enabled:
         raise AIProviderDisabled("Course assistant is disabled by instructor policy.")
     if len(prompt_text) > settings.ai_max_prompt_chars:
         raise AIProviderError(f"Prompt is too long for the configured limit of {settings.ai_max_prompt_chars} characters.")
@@ -111,7 +117,7 @@ def run_course_assistant(settings: Settings, policy: AIPolicy, task_type: str, p
                 {"role": "user", "content": prompt_text},
             ],
             "store": False,
-            "max_output_tokens": 700,
+            "max_output_tokens": settings.ai_external_max_output_tokens,
         },
         timeout=30,
     )

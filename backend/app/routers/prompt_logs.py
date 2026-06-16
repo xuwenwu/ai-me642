@@ -6,7 +6,9 @@ from ..database import get_db
 from ..deps import current_user, ensure_owner_or_staff
 from ..models import AIPolicy, Course, PromptLogEntry, PromptTemplate, User
 from ..schemas import AIPolicyOut, AssistantPromptIn, PromptLogIn, PromptLogOut, PromptTemplateOut
+from ..services.ai_usage import assert_external_budget_available
 from ..services.ai_provider import AIPrivacyBlocked, AIProviderDisabled, AIProviderError, privacy_flags, run_course_assistant
+from ..services.course_defaults import ensure_starter_prompt_templates
 
 
 router = APIRouter(prefix="/prompt-logs", tags=["prompt-logs"])
@@ -91,6 +93,9 @@ def prompt_templates(
     _: User = Depends(current_user),
 ) -> list[PromptTemplateOut]:
     course = _default_course(db)
+    created = ensure_starter_prompt_templates(db, course)
+    if created:
+        db.commit()
     rows = (
         db.query(PromptTemplate)
         .filter(PromptTemplate.course_id == course.id, PromptTemplate.status == "active")
@@ -136,8 +141,15 @@ def generate_assistant_prompt_log(
     user: User = Depends(current_user),
 ) -> PromptLogEntry:
     policy = _ensure_policy(db)
+    settings = get_settings()
+    mode = (policy.assistant_provider or settings.ai_provider_mode or "offline").strip().lower()
+    if mode == "openai":
+        try:
+            assert_external_budget_available(db, settings, payload.prompt_text)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from exc
     try:
-        result = run_course_assistant(get_settings(), policy, payload.task_type, payload.prompt_text)
+        result = run_course_assistant(settings, policy, payload.task_type, payload.prompt_text)
     except AIPrivacyBlocked as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except AIProviderDisabled as exc:

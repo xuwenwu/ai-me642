@@ -264,6 +264,30 @@ table {
   margin-top: 0.2rem;
 }
 
+.metric-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  margin: 0.65rem 0;
+}
+
+.metric-grid div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.55rem;
+}
+
+.metric-grid span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.8rem;
+}
+
+.metric-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+}
+
 .evidence-list {
   display: flex;
   flex-wrap: wrap;

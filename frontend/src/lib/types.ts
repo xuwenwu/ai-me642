@@ -105,6 +105,29 @@ export type AIPolicyInput = {
   assistant_retention_days: number;
 };
 
+export type AIProviderReadiness = {
+  provider_enabled: boolean;
+  provider_mode: string;
+  configured: boolean;
+  model: string;
+  request_limit: number;
+  requests_used: number;
+  token_budget: number;
+  tokens_estimated: number;
+  remaining_requests: number;
+  remaining_tokens: number;
+  message: string;
+};
+
+export type AIProviderTestResult = {
+  status: string;
+  provider_status: string;
+  provider_model: string;
+  output_summary: string;
+  privacy_flags: string[];
+  readiness: AIProviderReadiness;
+};
+
 export type PromptTemplate = {
   id: number;
   course_id: number;

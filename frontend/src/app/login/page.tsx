@@ -26,7 +26,8 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       }, false);
       setAuth(result.access_token, result.user);
-      window.location.assign(result.user.must_change_password ? '/account/password' : '/dashboard');
+      const destination = result.user.role === 'student' ? '/dashboard' : '/instructor';
+      window.location.assign(result.user.must_change_password ? '/account/password' : destination);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

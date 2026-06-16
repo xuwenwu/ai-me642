@@ -248,6 +248,21 @@ def test_student_to_instructor_lab3_workflow(tmp_path):
             instructor_policy = client.get("/api/instructor/ai-policy", headers=instructor_headers)
             assert instructor_policy.status_code == 200
             policy_payload = instructor_policy.json()
+            readiness = client.get("/api/instructor/ai-policy/readiness", headers=instructor_headers)
+            assert readiness.status_code == 200
+            assert readiness.json()["provider_mode"] == "offline"
+            assert readiness.json()["configured"] is True
+            assert readiness.json()["remaining_requests"] >= 0
+
+            private_assistant_test = client.post(
+                "/api/instructor/ai-policy/test",
+                headers=instructor_headers,
+                json={"task_type": "lammps_debugging", "prompt_text": "Plan cautious validation checks for an NVE LAMMPS log."},
+            )
+            assert private_assistant_test.status_code == 200
+            assert private_assistant_test.json()["provider_status"] == "generated_offline"
+            assert private_assistant_test.json()["readiness"]["provider_mode"] == "offline"
+
             edited_policy = client.patch(
                 "/api/instructor/ai-policy",
                 headers=instructor_headers,

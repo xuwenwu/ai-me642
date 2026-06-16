@@ -87,6 +87,7 @@
 - Instructor-controlled course assistant switch in Course Setup.
 - Offline course-guidance provider for safe pilot testing without external calls.
 - Optional OpenAI provider path gated by instructor policy and server environment.
+- Instructor-only provider readiness check, test prompt, and monthly external-call guardrails.
 - Provider metadata, response id, model, and privacy flags on prompt logs.
 - Prompt privacy checks before external provider calls.
 - Controlled AI setup documentation.

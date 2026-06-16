@@ -16,6 +16,9 @@ from ..schemas import (
     AIPolicyIn,
     AIPolicyOut,
     AccountStatusIn,
+    AIProviderReadinessOut,
+    AIProviderTestIn,
+    AIProviderTestOut,
     AssignmentManageIn,
     AssignmentAnalyticsOut,
     AssignmentOut,
@@ -38,7 +41,10 @@ from ..schemas import (
     RubricCriterionOut,
     SubmissionOut,
 )
+from ..services.ai_provider import AIPrivacyBlocked, AIProviderDisabled, AIProviderError, run_course_assistant
+from ..services.ai_usage import assert_external_budget_available, monthly_external_usage
 from ..services.canvas_provider import canvas_status
+from ..services.course_defaults import ensure_starter_prompt_templates
 
 
 router = APIRouter(prefix="/instructor", tags=["instructor"])
@@ -521,6 +527,7 @@ def _roster_rows(db: Session) -> list[RosterStudentOut]:
         .order_by(User.full_name)
         .all()
     )
+
     rows: list[RosterStudentOut] = []
     for enrollment in enrollments:
         submissions = db.query(Submission).filter_by(user_id=enrollment.user_id).all()
@@ -542,6 +549,44 @@ def _roster_rows(db: Session) -> list[RosterStudentOut]:
             )
         )
     return rows
+
+
+def _ai_readiness_out(db: Session, policy: AIPolicy) -> AIProviderReadinessOut:
+    settings = get_settings()
+    provider_mode = (policy.assistant_provider or settings.ai_provider_mode or "offline").strip().lower()
+    model = (policy.assistant_model or settings.ai_provider_model).strip()
+    usage = monthly_external_usage(db, settings)
+    configured = provider_mode == "offline" or (
+        settings.ai_provider_enabled
+        and provider_mode == "openai"
+        and bool(settings.openai_api_key)
+        and bool(model)
+    )
+    if provider_mode == "offline":
+        message = "Offline course guidance is available without external AI calls."
+    elif configured:
+        message = "OpenAI provider is configured server-side. Test it before enabling for students."
+    elif not settings.ai_provider_enabled:
+        message = "OpenAI provider calls are disabled on this server."
+    elif not settings.openai_api_key:
+        message = "OPENAI_API_KEY is not configured on this server."
+    elif not model:
+        message = "No OpenAI model is configured."
+    else:
+        message = "OpenAI provider is not ready."
+    return AIProviderReadinessOut(
+        provider_enabled=settings.ai_provider_enabled,
+        provider_mode=provider_mode,
+        configured=configured,
+        model=model,
+        request_limit=usage.request_limit,
+        requests_used=usage.requests_used,
+        token_budget=usage.token_budget,
+        tokens_estimated=usage.tokens_estimated,
+        remaining_requests=usage.remaining_requests,
+        remaining_tokens=usage.remaining_tokens,
+        message=message,
+    )
 
 
 @router.get("/submissions", response_model=list[SubmissionOut])
@@ -602,6 +647,14 @@ def get_ai_policy(
     return _policy_out(_ensure_policy(db))
 
 
+@router.get("/ai-policy/readiness", response_model=AIProviderReadinessOut)
+def get_ai_provider_readiness(
+    db: Session = Depends(get_db),
+    _: User = Depends(staff_user),
+) -> AIProviderReadinessOut:
+    return _ai_readiness_out(db, _ensure_policy(db))
+
+
 @router.patch("/ai-policy", response_model=AIPolicyOut)
 def update_ai_policy(
     payload: AIPolicyIn,
@@ -615,12 +668,63 @@ def update_ai_policy(
     return _policy_out(policy)
 
 
+@router.post("/ai-policy/test", response_model=AIProviderTestOut)
+def test_ai_provider(
+    payload: AIProviderTestIn,
+    db: Session = Depends(get_db),
+    staff: User = Depends(staff_user),
+) -> AIProviderTestOut:
+    policy = _ensure_policy(db)
+    settings = get_settings()
+    mode = (policy.assistant_provider or settings.ai_provider_mode or "offline").strip().lower()
+    if mode == "openai":
+        try:
+            assert_external_budget_available(db, settings, payload.prompt_text)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from exc
+    try:
+        result = run_course_assistant(settings, policy, payload.task_type, payload.prompt_text, force_enabled=True)
+    except AIPrivacyBlocked as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AIProviderDisabled as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except AIProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if result.provider_status == "generated_external":
+        db.add(
+            PromptLogEntry(
+                user_id=staff.id,
+                title="Instructor course assistant provider test",
+                ai_tool_name="ME642 Course Assistant",
+                task_type=payload.task_type,
+                prompt_text=payload.prompt_text,
+                ai_output_summary=result.output_summary,
+                provider_status=result.provider_status,
+                provider_model=result.provider_model,
+                provider_response_id=result.provider_response_id,
+                privacy_flags_json=json.dumps(result.privacy_flags),
+            )
+        )
+        db.commit()
+    return AIProviderTestOut(
+        status="ok",
+        provider_status=result.provider_status,
+        provider_model=result.provider_model,
+        output_summary=result.output_summary,
+        privacy_flags=result.privacy_flags,
+        readiness=_ai_readiness_out(db, policy),
+    )
+
+
 @router.get("/prompt-templates", response_model=list[PromptTemplateOut])
 def get_prompt_templates(
     db: Session = Depends(get_db),
     _: User = Depends(staff_user),
 ) -> list[PromptTemplateOut]:
     course = _default_course(db)
+    created = ensure_starter_prompt_templates(db, course)
+    if created:
+        db.commit()
     rows = db.query(PromptTemplate).filter_by(course_id=course.id).order_by(PromptTemplate.task_type, PromptTemplate.title).all()
     return [_template_out(row) for row in rows]
 

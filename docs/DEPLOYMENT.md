@@ -61,14 +61,13 @@ Copy-Item .env.pilot.example .env.pilot
 3. Build and start:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml --env-file .env.pilot up -d --build
+.\scripts\pilot-start.ps1 -Port 3000
 ```
 
 4. Verify local readiness:
 
 ```powershell
-docker compose -f docker-compose.pilot.yml ps
-Invoke-WebRequest http://127.0.0.1:3000/api/health/ready -UseBasicParsing
+.\scripts\pilot-status.ps1 -Port 3000
 ```
 
 5. Put HTTPS in front of `127.0.0.1:3000`. The backend should stay private behind the frontend proxy.
@@ -141,6 +140,12 @@ cd backend
 
 Backups are written under `backend/data/backups/`, which is ignored by Git.
 
+For the Docker pilot stack, prefer the top-level wrapper because it runs the container backup and copies the ZIP to a host folder:
+
+```powershell
+.\scripts\pilot-backup.ps1 -Port 3000
+```
+
 For production databases other than SQLite, use the database provider's backup tool and separately back up `UPLOAD_ROOT`.
 
 ## Controlled AI
@@ -149,11 +154,12 @@ External AI calls are disabled by default. For a controlled pilot, start with of
 
 ## CI
 
-GitHub Actions runs on pull requests and pushes to `main`:
+GitHub Actions runs on pull requests and pushes to `main` and `codex/phase-2-pilot-readiness`:
 
 - backend tests with Python 3.12
 - frontend typecheck
 - frontend production build
+- backend and frontend Docker build smoke checks
 
 ## Temporary Phone Tunnels
 

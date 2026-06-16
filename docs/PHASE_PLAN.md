@@ -146,3 +146,10 @@
 - Assignment validation settings can enforce minimum parsed run length.
 - Assignment validation settings can fail excessive LAMMPS warning counts.
 - Validation tests cover the new assignment-level thresholds.
+
+## Phase XIX: E2E Browser Test Automation
+
+- Playwright browser tests cover student submission, validation, interpretation, and submit flow.
+- Instructor browser tests cover review queue, validation evidence, grading, gradebook, and course setup checks.
+- Mobile viewport tests cover student and instructor core page rendering.
+- E2E tests create unique pilot data through instructor APIs, then verify behavior through the browser UI.

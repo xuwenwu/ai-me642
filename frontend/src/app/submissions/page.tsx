@@ -230,7 +230,7 @@ export default function SubmissionsPage() {
         </section>
         <section className="card">
           <h2>Select Submission</h2>
-          <select value={selected?.id || ''} onChange={(e) => setSelectedId(Number(e.target.value))}>
+          <select data-testid="student-submission-select" value={selected?.id || ''} onChange={(e) => setSelectedId(Number(e.target.value))}>
             {submissions.map((submission) => <option key={submission.id} value={submission.id}>#{submission.id} {submission.title}</option>)}
           </select>
           {selected ? (
@@ -275,7 +275,7 @@ export default function SubmissionsPage() {
               <label>File type<select value={fileType} onChange={(e) => setFileType(e.target.value)}>
                 {fileTypes.map((type) => <option key={type} value={type}>{fileTypeLabels[type] ?? type}</option>)}
               </select></label>
-              <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              <input data-testid="artifact-upload-input" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               <button disabled={!file}>Upload</button>
             </form>
             <details className="details-panel" open={selected.files.length > 0}>

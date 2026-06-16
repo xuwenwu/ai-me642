@@ -269,6 +269,19 @@ textarea {
   margin: 0.5rem 0;
 }
 
+.feedback-list-item {
+  align-items: flex-start;
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+  margin-bottom: 0.65rem;
+  text-align: left;
+  width: 100%;
+}
+
 .status {
   border-radius: 999px;
   display: inline-block;

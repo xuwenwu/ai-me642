@@ -154,6 +154,38 @@ export type PromptTemplateInput = {
   status: string;
 };
 
+export type PilotFeedback = {
+  id: number;
+  user_id: number;
+  user_email: string;
+  user_full_name: string;
+  role: string;
+  page_url: string;
+  category: string;
+  severity: string;
+  message: string;
+  contact_allowed: boolean;
+  status: string;
+  instructor_notes: string;
+  resolved_by_id: number | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PilotFeedbackInput = {
+  category: string;
+  severity: string;
+  page_url: string;
+  message: string;
+  contact_allowed: boolean;
+};
+
+export type PilotFeedbackUpdate = {
+  status: string;
+  instructor_notes: string;
+};
+
 export type FileArtifact = {
   id: number;
   original_filename: string;

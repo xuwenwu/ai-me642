@@ -68,7 +68,9 @@ Expected readiness response:
 Also confirm:
 
 - Students can reach `/login`.
+- Students can find `/feedback` from the top navigation.
 - Instructor can open Course Setup.
+- Instructor can open `/instructor/feedback`.
 - At least one sample submission can run validation.
 - Course-facing materials in `docs/course_pilot` have been adapted for the current class.
 - Backups completed after the previous class activity.
@@ -142,6 +144,13 @@ For suspected privacy or AI-policy issues:
 - Export prompt logs for the affected assignment.
 - Preserve the relevant submission package and logs for review.
 
+For reported pilot friction:
+
+- Open Instructor -> Pilot Feedback.
+- Filter for `blocks_progress` and `new` first.
+- Add instructor notes when a workaround is given.
+- Export `pilot_feedback.csv` after each class activity.
+
 ## Pilot Exit Criteria
 
 At the end of the pilot, export:
@@ -151,6 +160,7 @@ At the end of the pilot, export:
 - LMS submission detail CSV.
 - Roster CSV.
 - Full data/upload backup ZIP.
+- Pilot feedback CSV.
 
 Then document:
 

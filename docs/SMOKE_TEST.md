@@ -20,6 +20,16 @@ npm run e2e
 
 If testing a fresh local dev server instead of the Docker pilot, set `E2E_BASE_URL` to the frontend URL and optionally set `E2E_INSTRUCTOR_EMAIL` / `E2E_INSTRUCTOR_PASSWORD`.
 
+The browser tests intentionally create uniquely named `e2e-...` students and assignments. Clean those records after repeated local runs:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\cleanup_e2e_data.py
+.\.venv\Scripts\python.exe scripts\cleanup_e2e_data.py --confirm
+```
+
+In GitHub, the **E2E Browser Tests** workflow can be run manually from the Actions tab and also runs weekly. It starts a temporary backend/frontend stack, runs Playwright, and cleans its own E2E records at the end.
+
 ## Start The App
 
 Run these commands from the repository root in two separate terminals.
